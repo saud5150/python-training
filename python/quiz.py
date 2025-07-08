@@ -4,6 +4,14 @@ Quiz Logic
 
 
 import csv
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename='quiz.log',
+    filemode='a',
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class Quiz:
     """
@@ -32,18 +40,22 @@ class Quiz:
         """
         print(question)
         answer = input("Your answer: ")
+        logging.info(f"User answered: '{answer}' for question: '{question}'")
         return answer
 
     def check_answer(self, user_answer, correct_answer):
         """
-        Checks if the user's answer is correct.
+        Checks if the user's answer is correct
         """
-        return user_answer.strip().lower() == correct_answer.strip().lower()
+        is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
+        logging.info(f"User answered: , '{user_answer}',  for correct answer: , '{is_correct}'")
+        return is_correct
 
     def run_quiz(self):
         """
         Runs the quiz: presents each question, checks the answer, and updates the score.
         """
+        logging.info("Quiz started.")
         self.score = 0
         for item in self.quiz_data:
             user_answer = self.present_question(item['question'])
@@ -52,12 +64,14 @@ class Quiz:
                 self.score += 1
             else:
                 print("Wrong!\n")
+        logging.info("Quiz completed.")
 
     def show_score(self):
         """
         Displays the user's total score at the end of the quiz.
         """
         print(f"Your final score is {self.score} out of {len(self.quiz_data)}.")
+        logging.info(f"Quiz final score: {self.score} out of {len(self.quiz_data)}.")
 
 if __name__ == "__main__":
     quiz = Quiz('quiz_data.csv')

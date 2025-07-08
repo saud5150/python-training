@@ -1,5 +1,6 @@
 import pytest
 from quiz import Quiz
+import logging
 # Sample CSV content for testing
 TEST_CSV = 'test_quiz_data.csv'
 
@@ -56,3 +57,23 @@ def test_show_score(capsys):
     quiz.show_score()
     captured = capsys.readouterr()
     assert "Your final score is 2 out of 3." in captured.out
+
+def test_logging_output(caplog):
+    caplog.set_level(logging.INFO)
+    quiz = Quiz(TEST_CSV)
+    quiz.run_quiz()
+    assert "Quiz started." in caplog.text
+
+def test_answer_case_and_whitespace(monkeypatch):
+    quiz_data = [
+        {'question': 'Q1', 'answer': 'Answer'},
+        {'question': 'Q2', 'answer': 'Test'}
+    ]
+    quiz = Quiz('dummy.csv')
+    quiz.quiz_data = quiz_data
+    inputs = iter(['  answer  ', 'TEST'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    outputs = []
+    monkeypatch.setattr('builtins.print', lambda x: outputs.append(x))
+    quiz.run_quiz()
+    assert quiz.score == 2

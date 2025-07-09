@@ -30,7 +30,6 @@ class Quiz:
         """
         with open(self.filename, mode='r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
-            # self.quiz_data = [row for row in reader]
             self.quiz_data = list(reader)
 
 
@@ -60,17 +59,17 @@ class Quiz:
         for item in self.quiz_data:
             user_answer = self.present_question(item['question'])
             if self.check_answer(user_answer, item['answer']):
-                print("Correct!\n")
+                logging.info("Correct!")
                 self.score += 1
             else:
-                print("Wrong!\n")
+                logging.info("Wrong!")
+
         logging.info("Quiz completed.")
 
     def show_score(self):
         """
         Displays the user's total score at the end of the quiz.
         """
-        print(f"Your final score is {self.score} out of {len(self.quiz_data)}.")
         logging.info(f"Quiz final score: {self.score} out of {len(self.quiz_data)}.")
 
 if __name__ == "__main__":

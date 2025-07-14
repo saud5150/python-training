@@ -133,4 +133,7 @@ REST_FRAMEWORK = {
     ),
 }
 
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'User_ID',  # Use your actual PK field name
+}
 AUTH_USER_MODEL = 'quiz.User'

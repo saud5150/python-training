@@ -34,6 +34,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     #     if self.password and not self.Password_Hash:
     #         self.set_password(self.password)
     #     super().save(*args, **kwargs)
+    @property
+    def id(self):
+        return self.User_ID
 
 class Subject(models.Model):
     Subject_ID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -13,5 +13,6 @@ router.register(r'usersubjectscores', UserSubjectScoreViewSet)
 router.register(r'tasks', TaskViewSet)
 
 urlpatterns = [
+    path('questions/upload_csv/', QuestionCSVUploadView.as_view(), name='question-upload-csv'),
     path('', include(router.urls)),
 ] 

@@ -1,82 +1,114 @@
-# Python Quiz App
+# Quiz Application Project
 
-A simple quiz application built with Python.
+## Overview
+
+This repository contains two main components for a quiz application:
+
+- **Python CLI App** (`python/`):  
+  A command-line quiz app supporting, score tracking, and immediate feedback.
+- **Django REST Backend** (`backend/`):  
+  A web backend built with Django and Django REST Framework, designed to power the same quiz system for web or API clients.
 
 ## Features
 
-- Multiple-choice questions
+### Python CLI App
+
 - Score tracking
 - Immediate feedback on answers
 - Simple and easy-to-understand codebase
-- Extendable for more features (timers, user login, etc.)
+- Built with **Python 3.13**
+- Requirements managed via `requirements.txt`
 
-## Prerequisites
+### Django REST Backend
 
-- Python 3.x installed on your system
-- (For web version) `pip` for installing dependencies
+- RESTful API for quizzes, questions, users, and scores
+- Built with Django and Django REST Framework
+- Designed for extensibility (user authentication, performance tracking)
+- Follows the same data model as the CLI app, with added leaderboard capability
+- Uses PostgreSQL as the database backend
 
-## Setup
+## Folder Structure
 
-1. **Clone the Repository**
+```
+repo-root/
+├── python/
+│   ├── quiz.py
+│   ├── requirements.txt
+│   └── ...
+├── backend/
+│   ├── manage.py
+│   ├── backend_excercise/
+│   ├── quiz/
+│   └── ...
+├── docs/
+│   └── erd_diagram.png
+├── README.md
+└── ...
+```
+
+## Getting Started
+
+### Python CLI App
+
+1. **Navigate to the `python/` directory:**
    ```bash
-   git clone https://github.com/saud5150/python-training.git
    cd python
    ```
-
-2. **(Optional) Create a Virtual Environment**
+2. **Install requirements:**
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
    ```
-
-3. **Install Dependencies**
-   - For a Tkinter GUI app:
-     - Tkinter is included with most Python installations.
-   - For a cmd line app:
-     ```bash
-     pip install -r requirements.txt
-     ```
-
-## How to Run
-
-
-### For Python Cmd Line Version
-
-1. Activate the virtual environment (if used):
-   ```bash
-   source venv/bin/activate
-   ```
-2. Run the app:
+3. **Run the quiz app:**
    ```bash
    python quiz.py
    ```
 
-## Project Structure
+### Django REST Backend
 
-| File/Folder    | Purpose                                 |
-|----------------|-----------------------------------------|
-| `quiz.py`      | Main script for the quiz logic |
-| `requirements.txt` | List of required Python packages        |
-| `README.md`    | This documentation file                 |
+1. **Navigate to the `backend/` directory:**
+   ```bash
+   cd backend
+   ```
+2. **Set up a virtual environment and install requirements:**
+   ```bash
+   python -m venv env
+   source env/bin/activate  # On Windows: env\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. **Run migrations:**
+   ```bash
+   python manage.py migrate
+   ```
+4. **Start the development server:**
+   ```bash
+   python manage.py runserver
+   ```
 
-## Example Usage
+## Entity-Relationship Diagram (ERD)
 
-- **Start the app** and follow the on-screen instructions to answer quiz questions.
-- Your score will be displayed at the end of the quiz.
+The following diagram illustrates the core data model shared by the backend app:
 
-## Customization
+![Database ER Diagram](docs/Database%20ER%20diagram%20(Quiz%20App%20+%20Todo)%20-%20Quiz%20App.jpeg)
 
-- Add more questions by editing the questions list or database.
-- Modify the UI for a better user experience.
-- Add features like user authentication, timers, or different quiz categories.
+
+
+- Use the Django REST backend to build web or mobile clients.
+- Contribute by opening issues or pull requests.
+
+## Requirements
+
+- **Python 3.13+** (for CLI app)
+- **Django** and **Django REST Framework** (for backend)
+- All dependencies are listed in the respective `requirements.txt` files.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is open source and available under the [MIT License](LICENSE).
 
-## Credits
+## Contributing
 
-- Inspired by open-source Python quiz projects and tutorials.
+Contributions are welcome! Please fork the repo and submit a pull request.
 
-*Feel free to fork and adapt this README for your own Python quiz app!*
+## Contact
 
+For questions or support, please open an issue in the repository.

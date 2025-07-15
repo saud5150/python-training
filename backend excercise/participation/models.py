@@ -10,11 +10,11 @@ class UserQuiz(models.Model):
     User_Quiz_Id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     User_ID = models.ForeignKey(User, on_delete=models.CASCADE)
     Quiz_ID = models.ForeignKey(Quiz, on_delete=models.CASCADE)
-    Score = models.DecimalField(max_digits=5, decimal_places=2)
+    Score = models.DecimalField(null = True, max_digits=5, decimal_places=2)
     Total_Questions = models.IntegerField()
     Total_Correct = models.IntegerField()
     Started_At = models.DateTimeField()
-    Completed_At = models.DateTimeField()
+    Completed_At = models.DateTimeField(null = True, blank = True)
 
     def __str__(self):
         return f"{self.User_ID} - {self.Quiz_ID} ({self.Score})"
@@ -23,8 +23,8 @@ class UserAnswer(models.Model):
     User_Answer_Id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     User_Quiz_ID = models.ForeignKey(UserQuiz, on_delete=models.CASCADE)
     Question_ID = models.ForeignKey(Question, on_delete=models.CASCADE)
-    Answer_Text = models.TextField()
-    Is_Correct = models.BooleanField()
+    Answer_Text = models.TextField(null = True)
+    Is_Correct = models.BooleanField(default = False)
 
     def __str__(self):
         return f"Answer to {self.Question_ID} by {self.User_Quiz_ID.User_ID}"
@@ -40,14 +40,24 @@ class UserSubjectScore(models.Model):
         return f"{self.User_ID} - {self.Subject_ID}: {self.Aggregate_Score}"
 
 class Task(models.Model):
+    class TaskType(models.TextChoices):
+        QUIZ = 'quiz', 'Quiz'
+        REMINDER = 'reminder', 'Reminder'
+        TODO = 'todo', 'To-Do'
+
     Task_ID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     User_ID = models.ForeignKey(User, on_delete=models.CASCADE)
-    User_Quiz_ID = models.ForeignKey(UserQuiz, on_delete=models.CASCADE)
+    User_Quiz_ID = models.ForeignKey(UserQuiz, on_delete=models.CASCADE, null = True, blank = True)
     Title = models.CharField(max_length=50)
     Description = models.CharField(max_length=255)
     Status = models.CharField(max_length=50)
     Created_At = models.DateTimeField()
     Due_date = models.DateTimeField()
+    Type = models.CharField(
+        max_length=20,
+        choices = TaskType.choices,
+        default = TaskType.TODO
+    )
 
     def __str__(self):
         return f"{self.Title} ({self.Status})"

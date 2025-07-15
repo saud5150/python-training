@@ -86,9 +86,15 @@ repo-root/
 
 ## Entity-Relationship Diagram (ERD)
 
+The following diagram illustrates the core data model for the schema:
+
+![Database ER Diagram](docs/Database%20ER%20diagram%20(Quiz%20App%20+%20Todo)%20-%20Quiz%20App.svg)
+
+## Django Models Diagram
+
 The following diagram illustrates the core data model shared by the backend app:
 
-![Database ER Diagram](docs/Database%20ER%20diagram%20(Quiz%20App%20+%20Todo)%20-%20Quiz%20App.jpeg)
+![Database ER Diagram](docs/DjangoModel.svg)
 
 
 

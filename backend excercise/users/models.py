@@ -20,8 +20,13 @@ class UserManager(BaseUserManager):
         return self.create_user(email, name, password, **extra_fields)
     
 class User(AbstractBaseUser, PermissionsMixin):
+    class RoleType(models.TextChoices):
+        ADMIN = 'admin', 'Admin / HR'
+        TEACHER = 'teacher', "Teacher"
+        STUDENT = 'student', 'Student'
+
     User_ID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    role = models.CharField(max_length=50)
+    role = models.CharField(max_length=20, choices = RoleType.choices, default = RoleType.STUDENT)
     name = models.CharField(max_length=50)
     email = models.EmailField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)

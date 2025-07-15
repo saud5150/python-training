@@ -37,8 +37,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_extensions",
     "rest_framework",
     "quiz",
+    "users",
+    "quizzes",
+    "participation",
 ]
 
 MIDDLEWARE = [
@@ -136,4 +140,4 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'User_ID',  # Use your actual PK field name
 }
-AUTH_USER_MODEL = 'quiz.User'
+AUTH_USER_MODEL = 'users.User'

@@ -1,4 +1,8 @@
 from rest_framework import routers
+
+from participation.views import TaskViewSet, UserAnswerViewSet, UserQuizViewSet, UserSubjectScoreViewSet
+from quizzes.views import QuestionViewSet, QuizViewSet, SubjectViewSet
+from users.views import UserViewSet
 from .views import *
 from django.urls import path, include
 

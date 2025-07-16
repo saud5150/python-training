@@ -7,6 +7,9 @@ __pycache__/
 env/
 venv/
 
+# environment variables
+.env
+
 # Django migrations (optional: keep if you want to track migration history)
 */migrations/
 !*/migrations/__init__.py

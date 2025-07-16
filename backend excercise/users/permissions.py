@@ -8,6 +8,13 @@ class IsTeacher(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'teacher'
 
-class IsStudnet(BasePermission):
+class IsStudent(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'student' 
+
+class IsAdminOrTeacher(BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and
+            request.user.role in ['admin', 'teacher']
+        ) 

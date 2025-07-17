@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdmin
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
 
 # Create your views here.
 
@@ -19,6 +20,21 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering = ['User_ID']
     filterset_fields = ['User_ID', 'email', 'name']
     search_fields = ['email', 'name']
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or user.role == 'admin':
+            # Admin: see all users
+            return User.objects.all()
+        elif user.role == 'teacher':
+            # Teachers see themselves and all students
+            return User.objects.filter(Q(role='student') | Q(pk=user.pk))
+        elif user.role == 'student':
+            # Student: see only students
+            return User.objects.filter(role='student')
+        else:
+            # Default: see nothing
+            return User.objects.none()
 
 
 class StudentRegistrationView(APIView):

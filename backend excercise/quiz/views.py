@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions
+from rest_framework.generics import GenericAPIView
 
 from quizzes.models import Question, Quiz, Subject
 from .models import *
@@ -6,8 +7,9 @@ from .serializers import *
 
 
 
-class QuestionCSVUploadView(APIView):
+class QuestionCSVUploadView(GenericAPIView):
     parser_classes = [MultiPartParser]
+    serializer_class = QuestionCSVUploadSerializer  # <-- Add this
 
     def post(self, request, format=None):
         subject_id = request.data.get('Subject_ID')

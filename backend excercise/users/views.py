@@ -23,6 +23,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class StudentRegistrationView(APIView):
     permission_classes = []  # Open registration
+    serializer_class = UserSerializer
 
     def post(self, request):
         data = request.data.copy()
@@ -35,6 +36,7 @@ class StudentRegistrationView(APIView):
 
 class TeacherRegistrationView(APIView):
     permission_classes = [IsAdmin]  # Only admins can create teachers
+    serializer_class = UserSerializer
 
     def post(self, request):
         data = request.data.copy()
@@ -47,6 +49,7 @@ class TeacherRegistrationView(APIView):
 
 class AdminRegistrationView(APIView):
     permission_classes = [IsAdmin]  # Only admins can create admins
+    serializer_class = UserSerializer
 
     def post(self, request):
         data = request.data.copy()
@@ -60,6 +63,7 @@ class AdminRegistrationView(APIView):
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer  # <-- Add this
 
     def get(self, request):
         serializer = UserSerializer(request.user)
@@ -82,10 +86,11 @@ class UserProfileView(APIView):
 
 class UserDeleteView(APIView):
     permission_classes = [IsAdmin]
-
-    def delete(self, request, user_id):
+    serializer_class = UserSerializer  # <-- Add this (for schema, even if not used directly)
+    
+    def delete(self, request, User_ID):
         try:
-            user = User.objects.get(User_ID=user_id)
+            user = User.objects.get(User_ID=User_ID)
         except User.DoesNotExist:
             return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
         user.delete()

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "quizzes",
     "participation",
     'django_extensions',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -142,7 +143,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
 }
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Quiz Project API',
+    'DESCRIPTION': 'API documentation for Quiz project.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # ... other options as needed
+}
+
 
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'User_ID',  # Use your actual PK field name

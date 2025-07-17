@@ -23,8 +23,18 @@ class QuizViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'Quiz_ID'
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrTeacher()]  # Only admin/teacher can create/edit
+        return [permissions.IsAuthenticated()]  # Anyone can view
+
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'Question_ID'
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrTeacher()]
+        return [permissions.IsAuthenticated()]

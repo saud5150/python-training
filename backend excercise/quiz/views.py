@@ -20,7 +20,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminOrTeacher()]
+            return [IsAdmin()]
         return [permissions.IsAuthenticated()]
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -31,7 +31,7 @@ class QuizViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminOrTeacher()]  # Only admin/teacher can create/edit
+            return [IsAdmin()]  # Only admin/teacher can create/edit
         return [permissions.IsAuthenticated()]  # Anyone can view
 
 class QuestionViewSet(viewsets.ModelViewSet):
@@ -42,10 +42,11 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminOrTeacher()]
+            return [IsAdmin()]
         return [permissions.IsAuthenticated()]
 
 class QuestionCSVUploadView(GenericAPIView):
+    permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser]
     serializer_class = QuestionCSVUploadSerializer  # <-- Add this
 

@@ -45,9 +45,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "core",
     "quiz",
     "users",
-    "quizzes",
     "participation",
     'django_extensions',
     'drf_spectacular',
@@ -156,6 +156,6 @@ SPECTACULAR_SETTINGS = {
 
 
 SIMPLE_JWT = {
-    'USER_ID_FIELD': 'User_ID',  # Use your actual PK field name
+    'USER_ID_FIELD': 'id',  # Use your actual PK field name
 }
 AUTH_USER_MODEL = 'users.User'

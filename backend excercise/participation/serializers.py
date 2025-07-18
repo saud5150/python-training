@@ -1,26 +1,26 @@
 from rest_framework import serializers
 from .models import *
 
-class UserQuizSerializer(serializers.ModelSerializer):
+class QuizSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserQuiz
+        model = Quiz
         fields = '__all__'
-        lookup_field = 'User_Quiz_ID'
+        lookup_field = 'id'
 
-class UserAnswerSerializer(serializers.ModelSerializer):
+class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserAnswer
+        model = Answer
         fields = '__all__'
-        lookup_field = 'User_Answer_ID'
+        lookup_field = 'id'
 
-class UserSubjectScoreSerializer(serializers.ModelSerializer):
+class ScoreSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserSubjectScore
+        model = Score
         fields = '__all__'
-        lookup_field = 'User_Subject_Score_ID'
+        lookup_field = 'id'
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__' 
-        lookup_field = 'Task_ID'
+        lookup_field = 'id'

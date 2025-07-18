@@ -1,11 +1,49 @@
 from rest_framework import viewsets, permissions
 from rest_framework.generics import GenericAPIView
 
-from quizzes.models import Question, Quiz, Subject
+from quiz.models import Question, Quiz, Subject
 from .models import *
 from .serializers import *
 
+from django.shortcuts import render
+from rest_framework import viewsets, permissions
 
+from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer
+from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
+
+# Create your views here.
+
+class SubjectViewSet(viewsets.ModelViewSet):
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+    lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrTeacher()]
+        return [permissions.IsAuthenticated()]
+
+class QuizViewSet(viewsets.ModelViewSet):
+    queryset = Quiz.objects.all()
+    serializer_class = QuizSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrTeacher()]  # Only admin/teacher can create/edit
+        return [permissions.IsAuthenticated()]  # Anyone can view
+
+class QuestionViewSet(viewsets.ModelViewSet):
+    queryset = Question.objects.all()
+    serializer_class = QuestionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOrTeacher()]
+        return [permissions.IsAuthenticated()]
 
 class QuestionCSVUploadView(GenericAPIView):
     parser_classes = [MultiPartParser]

@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+
+from core.models import BaseModel
 # Create your models here.
 
 
@@ -19,13 +21,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, name, password, **extra_fields)
     
-class User(AbstractBaseUser, PermissionsMixin):
+class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     class RoleType(models.TextChoices):
         ADMIN = 'admin', 'Admin / HR'
         TEACHER = 'teacher', "Teacher"
         STUDENT = 'student', 'Student'
 
-    User_ID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.CharField(max_length=20, choices = RoleType.choices, default = RoleType.STUDENT)
     name = models.CharField(max_length=50)
     email = models.EmailField(max_length=255, unique=True)

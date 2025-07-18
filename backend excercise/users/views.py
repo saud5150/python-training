@@ -15,10 +15,10 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-    lookup_field = 'User_ID'
-    ordering_fields = ['User_ID', 'email', 'name']
-    ordering = ['User_ID']
-    filterset_fields = ['User_ID', 'email', 'name']
+    lookup_field = 'id'
+    ordering_fields = ['id', 'email', 'name']
+    ordering = ['id']
+    filterset_fields = ['id', 'email', 'name']
     search_fields = ['email', 'name']
 
     def get_queryset(self):

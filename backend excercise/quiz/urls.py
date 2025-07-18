@@ -10,6 +10,8 @@ router.register(r'questions', QuestionViewSet)
 
 
 urlpatterns = [
+    path('quiz/assign_teacher/', AssignTeacherToQuizView.as_view(), name='assign-teacher-to-quiz'),
+    
     path('questions/upload_csv/', QuestionCSVUploadView.as_view(), name='question-upload-csv'),
     path('', include(router.urls)),
 ] 

@@ -8,9 +8,11 @@ import csv
 from io import TextIOWrapper
 
 from core.models import BaseModel
+from users.models import User
 
 class Subject(BaseModel, models.Model):
     name = models.CharField(max_length=100)
+    teachers = models.ManyToManyField(User, limit_choices_to={'role': 'teacher'}, related_name='subjects', blank=True)
 
     def __str__(self):
         return self.name
@@ -19,6 +21,7 @@ class Quiz(BaseModel, models.Model):
     subject_id = models.ForeignKey(Subject, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.TextField()
+    assigned_teacher = models.ForeignKey(User, limit_choices_to={'role': 'teacher'}, related_name='quizzes', on_delete=models.SET_NULL , null = True)
 
     def __str__(self):
         return self.title

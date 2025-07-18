@@ -20,7 +20,9 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = '__all__'
         lookup_field = 'id'
 
-
+class AssignTeacherToQuizSerializer(serializers.Serializer):
+    quiz_id = serializers.UUIDField()
+    teacher_id = serializers.UUIDField()
 
 class QuestionCSVUploadSerializer(serializers.Serializer):
     subject_id = serializers.UUIDField()

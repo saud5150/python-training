@@ -31,14 +31,15 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.filter(Q(role='student') | Q(pk=user.pk))
         elif user.role == 'student':
             # Student: see only students
-            return User.objects.filter(role='student')
+            # return User.objects.filter(role='student')
+            return User.objects.filter(pk=user.pk) # Only see themselves
         else:
             # Default: see nothing
             return User.objects.none()
 
 
 class StudentRegistrationView(APIView):
-    permission_classes = []  # Open registration
+    permission_classes = [IsAdmin]  # Only admins can create students
     serializer_class = UserSerializer
 
     def post(self, request):

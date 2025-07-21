@@ -6,6 +6,8 @@ from users.models import *
 from django.core.mail import send_mail
 from django.conf import settings
 
+from users.utils import send_registration_email
+
 
 class UserSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source='User_ID', read_only=True)
@@ -22,20 +24,9 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)  # This hashes the password!
         user.save()
         # Send welcome email after user is created
-        try:
-            send_mail(
-                subject='Your Account Has Been Created',
-                message=f"Hi {user.name}, your account is now active.",
-                from_email=None,
-                recipient_list=[user.email],
-                fail_silently=False
-            )
-        except SMTPAuthenticationError:
-            raise ValidationError({"email": "Email sending failed: Invalid credentials."})
-        except SMTPException as e:
-            raise ValidationError({"email": f"Email sending failed: {str(e)}"})
-        except Exception:
-            raise ValidationError({"email": "An unexpected error occurred while sending email."})
+        # 📨 Email sent from utility
+        if not send_registration_email(user, password):
+            raise ValidationError({"email": "Failed to send confirmation email. Please contact support."})
         return user
 
     def update(self, instance, validated_data):

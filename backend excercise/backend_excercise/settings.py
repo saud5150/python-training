@@ -160,3 +160,11 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',  # Use your actual PK field name
 }
 AUTH_USER_MODEL = 'users.User'
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_HOST = os.getenv('EMAIL_HOST')              # Your SMTP server
+EMAIL_PORT = os.getenv('EMAIL_PORT')                            # Usually 587 for TLS
+EMAIL_HOST_USER = os.getenv('EMAIL_NAME')    # Your email
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')       # App-specific password is recommended
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')  # Default sender email

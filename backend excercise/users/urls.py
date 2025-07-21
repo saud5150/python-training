@@ -5,14 +5,14 @@ from .views import (
     TeacherRegistrationView,
     AdminRegistrationView,
     UserProfileView,
-    UserDeleteView,  # optionally remove if handled in ViewSet
-    UserViewSet
+    UserListCreateView,
+    UserDetailView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # DRF router for ViewSet routing
-router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)
+# router = routers.DefaultRouter()
+# router.register(r'users', UserViewSet)
 
 urlpatterns = [
     # Token endpoints
@@ -28,8 +28,9 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='profile'),
 
     # User actions
-    path('users/delete/<uuid:user_id>/', UserDeleteView.as_view(), name='user-delete'),  # Optional if ViewSet handles delete
+    path('user/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('users/', UserListCreateView.as_view(), name='user-list-create'),
 
     # Include DRF router URLs for UserViewSet
-    path('', include(router.urls)),
+    # path('', include(router.urls)),
 ]

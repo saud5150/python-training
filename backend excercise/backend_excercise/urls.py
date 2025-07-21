@@ -32,7 +32,7 @@ swaggerpatterns = [
 # 2. Main API and admin URLs
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/users/', include('users.urls')),
+    path('api/v1/', include('users.urls')),
     path('api/v1/quiz/', include('quiz.urls')),
     path('api/v1/participation/', include('participation.urls')),
 

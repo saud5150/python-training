@@ -5,7 +5,7 @@ from .views import (
     TeacherRegistrationView,
     AdminRegistrationView,
     UserProfileView,
-    UserListCreateView,
+    UserListView,
     UserDetailView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -28,8 +28,8 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='profile'),
 
     # User actions
-    path('user/<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
-    path('users/', UserListCreateView.as_view(), name='user-list-create'),
+    path('<uuid:id>/', UserDetailView.as_view(), name='user-detail'),
+    path('', UserListView.as_view(), name='user-list-create'),
 
     # Include DRF router URLs for UserViewSet
     # path('', include(router.urls)),

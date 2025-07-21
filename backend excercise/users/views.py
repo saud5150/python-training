@@ -7,13 +7,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdmin, IsAdminOrTeacher
 from django.db.models import Q
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 
 # Create your views here.
 
 
 # List all users and create user (GET/POST /users/)
-class UserListCreateView(ListCreateAPIView):
+class UserListView(ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]

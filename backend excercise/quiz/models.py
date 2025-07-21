@@ -7,7 +7,7 @@ from rest_framework import status
 import csv
 from io import TextIOWrapper
 
-from core.models import BaseModel
+from base_model import BaseModel
 from users.models import User
 
 class Subject(BaseModel, models.Model):

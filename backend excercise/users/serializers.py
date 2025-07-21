@@ -29,24 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        request = self.context.get('request')
-        user_role = getattr(getattr(request, 'user', None), 'role', None) if request else None
-
-        if user_role == 'student':
-            # Students see only id, name, and role
-            return {
-                'id': data['id'],
-                'name': data['name'],
-                'role': data['role'],
-            }
-        elif user_role == 'teacher':
-            # Teachers see id, name, role, and email
-            return {
-                'id': data['id'],
-                'name': data['name'],
-                'role': data['role'],
-                'email': data['email'],
-            }
-        # Admins and others see all fields
-        return data
+        """
+        Return all fields for all user roles.
+        """
+        return super().to_representation(instance)

@@ -20,9 +20,9 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # Custom registration endpoints
-    path('register/student/', StudentRegistrationView.as_view(), name='register-student'),
-    path('register/teacher/', TeacherRegistrationView.as_view(), name='register-teacher'),
-    path('register/admin/', AdminRegistrationView.as_view(), name='register-admin'),
+    path('student/register/', StudentRegistrationView.as_view(), name='register-student'),
+    path('teacher/register/', TeacherRegistrationView.as_view(), name='register-teacher'),
+    path('admin/register/', AdminRegistrationView.as_view(), name='register-admin'),
 
     # Profile
     path('profile/', UserProfileView.as_view(), name='profile'),

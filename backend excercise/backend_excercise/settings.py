@@ -144,7 +144,9 @@ REST_FRAMEWORK = {
         'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': [
         'renderer.CoreRenderer'
-    ]
+    ],
+    'EXCEPTION_HANDLER': 'users.utils.custom_exception_handler',
+
 
 }
 SPECTACULAR_SETTINGS = {

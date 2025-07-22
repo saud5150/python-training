@@ -10,13 +10,13 @@ from users.utils import send_registration_email
 
 
 class UserSerializer(serializers.ModelSerializer):
-    id = serializers.UUIDField(source='User_ID', read_only=True)
+    id = serializers.UUIDField( read_only=True)
     password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
         fields = '__all__'
-        lookup_field = 'User_ID'
+        lookup_field = 'id'
 
     def create(self, validated_data):
         password = validated_data.pop('password')

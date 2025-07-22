@@ -12,16 +12,26 @@ from rest_framework import viewsets, permissions
 
 from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer
 from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
+from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 
 # Create your views here.
 
-class SubjectViewSet(viewsets.ModelViewSet):
+class SubjectListCreateView(ListCreateAPIView):
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+
+    def get_permissions(self):
+        if self.request.method in ['POST']:
+            return [IsAdmin()]
+        return [permissions.IsAuthenticated()]
+    
+class SubjectDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     lookup_field = 'id'
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
         return [permissions.IsAuthenticated()]
 
@@ -47,26 +57,41 @@ class AssignTeacherToQuizView(APIView):
         serializer = QuizSerializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-class QuizViewSet(viewsets.ModelViewSet):
+class QuizListCreateView(ListCreateAPIView):
     queryset = Quiz.objects.all()
     serializer_class = QuizSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [permissions.IsAuthenticated()]
+    
+class QuizDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Quiz.objects.all()
+    serializer_class = QuizSerializer
     lookup_field = 'id'
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdmin()]  # Only admin/teacher can create/edit
-        return [permissions.IsAuthenticated()]  # Anyone can view
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            return [IsAdmin()]
+        return [permissions.IsAuthenticated()]
 
-class QuestionViewSet(viewsets.ModelViewSet):
+class QuestionListCreateView(ListCreateAPIView):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [permissions.IsAuthenticated()]
+    
+class QuestionDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Question.objects.all()
+    serializer_class = QuestionSerializer
     lookup_field = 'id'
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
         return [permissions.IsAuthenticated()]
 

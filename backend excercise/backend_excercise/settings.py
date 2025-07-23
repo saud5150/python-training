@@ -145,7 +145,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'renderer.CoreRenderer'
     ],
-    'EXCEPTION_HANDLER': 'users.utils.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'utils.custom_exception_handler',
 
 
 }

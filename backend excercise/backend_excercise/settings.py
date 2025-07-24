@@ -212,6 +212,7 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')  # Default sender email
 
 REST_AUTH = {
     'TOKEN_MODEL': None, # Set this if you are not using DRF's default token model
+
     'USE_JWT': True,
 }
 
@@ -220,5 +221,4 @@ REST_AUTH_SERIALIZERS = {
     'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
 }
 
-
-
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'

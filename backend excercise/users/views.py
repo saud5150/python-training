@@ -1,3 +1,7 @@
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+
+
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions
 from users.models import User
@@ -12,7 +16,11 @@ from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, C
 
 # Create your views here.
 
+# Google social login view
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
 
+    
 # List all users and create user (GET/POST /users/)
 class UserListView(ListAPIView):
     queryset = User.objects.all()

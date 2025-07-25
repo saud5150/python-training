@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, "environment.env"))
@@ -37,7 +36,11 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    
+    'django.contrib.sites',  # Required by allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -45,13 +48,35 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "core",
+    'rest_framework_simplejwt',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
     "quiz",
     "users",
     "participation",
     'django_extensions',
     'drf_spectacular',
 ]
+SITE_ID = 1  # Required by django-allauth
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+REST_USE_JWT = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -60,6 +85,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -68,7 +95,7 @@ ROOT_URLCONF = "backend_excercise.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -140,12 +167,23 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
+
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
         'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_RENDERER_CLASSES': [
+        'renderer.CoreRenderer'
+    ],
+    'EXCEPTION_HANDLER': 'utils.custom_exception_handler',
+
 
 }
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'id',  # Use your actual PK field name
+}
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Quiz Project API',
     'DESCRIPTION': 'API documentation for Quiz project.',
@@ -155,7 +193,32 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-SIMPLE_JWT = {
-    'USER_ID_FIELD': 'id',  # Use your actual PK field name
-}
+
 AUTH_USER_MODEL = 'users.User'
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_HOST = os.getenv('EMAIL_HOST')              # Your SMTP server
+EMAIL_PORT = os.getenv('EMAIL_PORT')                            # Usually 587 for TLS
+EMAIL_HOST_USER = os.getenv('EMAIL_NAME')    # Your email
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')       # App-specific password is recommended
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')  # Default sender email
+
+
+REST_AUTH = {
+    'TOKEN_MODEL': None, # Set this if you are not using DRF's default token model
+
+    'USE_JWT': True,
+}
+
+
+REST_AUTH_SERIALIZERS = {
+    'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
+}
+
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'

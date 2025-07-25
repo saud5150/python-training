@@ -2,14 +2,14 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions
 
 from participation.models import Task, Answer, Quiz, Score
-from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
+from participation.serializers import TaskSerializer, AnswerSerializer, ParticipationQuizSerializer, ScoreSerializer
 from users.permissions import IsAdmin, IsTeacher
 
 # Create your views here.
 
 class QuizViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.all()
-    serializer_class = QuizSerializer
+    serializer_class = ParticipationQuizSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
 

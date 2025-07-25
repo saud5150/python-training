@@ -2,7 +2,8 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
-from core.models import BaseModel
+from base_model import BaseModel
+
 # Create your models here.
 
 
@@ -37,11 +38,6 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['name']
 
     objects = UserManager()
-
-    # def save(self, *args, **kwargs):
-    #     if self.password and not self.Password_Hash:
-    #         self.set_password(self.password)
-    #     super().save(*args, **kwargs)
     @property
     def id(self):
-        return self.User_ID
+        return self.id

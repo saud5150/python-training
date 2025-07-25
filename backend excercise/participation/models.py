@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 
-from core.models import BaseModel
+from base_model import BaseModel
 from quiz.models import Question, Quiz, Subject
 from users.models import User
 

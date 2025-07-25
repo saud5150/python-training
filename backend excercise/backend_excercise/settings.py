@@ -222,3 +222,5 @@ REST_AUTH_SERIALIZERS = {
 }
 
 SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
+
+LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'

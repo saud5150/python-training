@@ -1,6 +1,7 @@
 from rest_framework import routers
 from django.urls import path, include
 from .views import (
+    SessionToJWTView,
     StudentRegistrationView,
     TeacherRegistrationView,
     AdminRegistrationView,
@@ -20,6 +21,9 @@ urlpatterns = [
     # Token endpoints
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('accounts/', include('allauth.urls')),
+    path('auth/session-to-jwt/', SessionToJWTView.as_view(), name='session_to_jwt'),
 
     # Authentication endpoints
     path('auth/google/', GoogleLogin.as_view(), name='google_login'),

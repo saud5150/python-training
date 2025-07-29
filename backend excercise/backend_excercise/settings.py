@@ -68,6 +68,10 @@ REST_USE_JWT = True
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+        },
         'SCOPE': [
             'profile',
             'email',
@@ -224,3 +228,5 @@ REST_AUTH_SERIALIZERS = {
 SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'
+
+FERNET_SECRET_KEY = os.getenv('FERNET_SECRET_KEY')

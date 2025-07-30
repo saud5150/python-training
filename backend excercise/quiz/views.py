@@ -7,35 +7,68 @@ from quiz.models import Question, Quiz, Subject
 from .models import *
 from .serializers import *
 
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from rest_framework import viewsets, permissions
 
 from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer
 from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 from .utils import process_question_csv_upload
+from drf_spectacular.utils import extend_schema
 
 # Create your views here.
 
-class SubjectListCreateView(ListCreateAPIView):
-    queryset = Subject.objects.all()
-    serializer_class = SubjectSerializer
+# ---- SUBJECT CRUD ----
+@extend_schema(tags=['Subject'])
+class SubjectView(APIView):
+    serializer_class = SubjectSerializer 
 
+        # We'll determine permission per-method
     def get_permissions(self):
-        if self.request.method in ['POST']:
+        # Only admin can POST (create), PUT/PATCH (update), DELETE
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
-        return [permissions.IsAuthenticated()]
-    
-class SubjectDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Subject.objects.all()
-    serializer_class = SubjectSerializer
-    lookup_field = 'id'
-
-    def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
+        # All authenticated users can GET (list/retrieve)
         return [permissions.IsAuthenticated()]
 
+    def get(self, request, pk=None):
+        if pk is None:
+            objs = Subject.objects.all()
+            serializer = SubjectSerializer(objs, many=True)
+            return Response(serializer.data)
+        obj = get_object_or_404(Subject, pk=pk)
+        serializer = SubjectSerializer(obj)
+        return Response(serializer.data)
+
+    def post(self, request, pk=None):
+        serializer = SubjectSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(SubjectSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None):
+        obj = get_object_or_404(Subject, pk=pk)
+        serializer = SubjectSerializer(obj, data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(SubjectSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk=None):
+        obj = get_object_or_404(Subject, pk=pk)
+        serializer = SubjectSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(SubjectSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None):
+        obj = get_object_or_404(Subject, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+@extend_schema(tags=['Quiz'])
 class AssignTeacherToQuizView(APIView):
     permission_classes = [IsAdmin]
     serializer_class = AssignTeacherToQuizSerializer  # <-- Add this
@@ -58,44 +91,105 @@ class AssignTeacherToQuizView(APIView):
         serializer = QuizSerializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class QuizListCreateView(ListCreateAPIView):
-    queryset = Quiz.objects.all()
+# ---- QUIZ CRUD ----
+@extend_schema(tags=['Quiz'])
+class QuizView(APIView):
     serializer_class = QuizSerializer
-
+        # We'll determine permission per-method
     def get_permissions(self):
-        if self.request.method == 'POST':
+        # Only admin can POST (create), PUT/PATCH (update), DELETE
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
-        return [permissions.IsAuthenticated()]
-    
-class QuizDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Quiz.objects.all()
-    serializer_class = QuizSerializer
-    lookup_field = 'id'
-
-    def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
+        # All authenticated users can GET (list/retrieve)
         return [permissions.IsAuthenticated()]
 
-class QuestionListCreateView(ListCreateAPIView):
-    queryset = Question.objects.all()
+    def get(self, request, pk=None):
+        if pk is None:
+            objs = Quiz.objects.select_related('subject_id', 'assigned_teacher').all()
+            serializer = QuizSerializer(objs, many=True)
+            return Response(serializer.data)
+        obj = get_object_or_404(Quiz, pk=pk)
+        serializer = QuizSerializer(obj)
+        return Response(serializer.data)
+
+    def post(self, request, pk=None):
+        serializer = QuizSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuizSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None):
+        obj = get_object_or_404(Quiz, pk=pk)
+        serializer = QuizSerializer(obj, data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuizSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk=None):
+        obj = get_object_or_404(Quiz, pk=pk)
+        serializer = QuizSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuizSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None):
+        obj = get_object_or_404(Quiz, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# ---- QUESTION CRUD ----
+@extend_schema(tags=['Question'])
+class QuestionView(APIView):
     serializer_class = QuestionSerializer
-
+        # We'll determine permission per-method
     def get_permissions(self):
-        if self.request.method == 'POST':
+        # Only admin can POST (create), PUT/PATCH (update), DELETE
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             return [IsAdmin()]
+        # All authenticated users can GET (list/retrieve)
         return [permissions.IsAuthenticated()]
+
+    def get(self, request, pk=None):
+        if pk is None:
+            objs = Question.objects.select_related('quiz_id').all()
+            serializer = QuestionSerializer(objs, many=True)
+            return Response(serializer.data)
+        obj = get_object_or_404(Question, pk=pk)
+        serializer = QuestionSerializer(obj)
+        return Response(serializer.data)
+
+    def post(self, request, pk=None):
+        serializer = QuestionSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuestionSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None):
+        obj = get_object_or_404(Question, pk=pk)
+        serializer = QuestionSerializer(obj, data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuestionSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk=None):
+        obj = get_object_or_404(Question, pk=pk)
+        serializer = QuestionSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            obj = serializer.save()
+            return Response(QuestionSerializer(obj).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk=None):
+        obj = get_object_or_404(Question, pk=pk)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
-class QuestionDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Question.objects.all()
-    serializer_class = QuestionSerializer
-    lookup_field = 'id'
-
-    def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
-        return [permissions.IsAuthenticated()]
-
+@extend_schema(tags=['Question'])
 class QuestionCSVUploadView(GenericAPIView):
     permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser]

@@ -7,7 +7,7 @@ from users.models import User
 
 # Create your models here.
 
-class Quiz(BaseModel, models.Model):
+class Quiz(BaseModel):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     score = models.DecimalField(null = True, max_digits=5, decimal_places=2)
@@ -18,7 +18,7 @@ class Quiz(BaseModel, models.Model):
     def __str__(self):
         return f"{self.user_id} - {self.quiz_id} ({self.score})"
 
-class Answer(BaseModel, models.Model):
+class Answer(BaseModel):
     user_quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     question_id = models.ForeignKey(Question, on_delete=models.CASCADE)
     answer_text = models.TextField(null = True)
@@ -27,7 +27,7 @@ class Answer(BaseModel, models.Model):
     def __str__(self):
         return f"Answer to {self.question_id} by {self.user_quiz_id.user_id}"
 
-class Score(BaseModel, models.Model):
+class Score(BaseModel):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     subject_id = models.ForeignKey(Subject, on_delete=models.CASCADE)
     aggregate_score = models.DecimalField(max_digits=5, decimal_places=2)
@@ -35,7 +35,7 @@ class Score(BaseModel, models.Model):
     def __str__(self):
         return f"{self.user_id} - {self.subject_id}: {self.aggregate_score}"
 
-class Task(BaseModel, models.Model):
+class Task(BaseModel):
     class TaskType(models.TextChoices):
         QUIZ = 'quiz', 'Quiz'
         REMINDER = 'reminder', 'Reminder'

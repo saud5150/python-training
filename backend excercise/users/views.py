@@ -2,6 +2,7 @@ from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 
 
+
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions
 from users.models import User
@@ -12,15 +13,30 @@ from rest_framework import status
 from users.permissions import IsAdmin, IsAdminOrTeacher
 from django.db.models import Q
 from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Create your views here.
+
+class SessionToJWTView(APIView):
+    # permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
+
+    def get(self, request):
+        user = request.user
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        })
 
 # Google social login view
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
 
-    
+
 # List all users and create user (GET/POST /users/)
 class UserListView(ListAPIView):
     queryset = User.objects.all()

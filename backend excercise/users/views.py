@@ -20,7 +20,6 @@ from drf_spectacular.utils import extend_schema
 # Create your views here.
 @extend_schema(tags=['Users', 'Authentication'])
 class SessionToJWTView(APIView):
-    # permission_classes = [IsAuthenticated]
     authentication_classes = [SessionAuthentication]
 
     def get(self, request):

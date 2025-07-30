@@ -12,7 +12,6 @@ from rest_framework import viewsets, permissions
 
 from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer
 from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
-from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
 from .utils import process_question_csv_upload
 from drf_spectacular.utils import extend_schema
 

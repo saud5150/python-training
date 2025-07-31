@@ -2,15 +2,13 @@
 from django.urls import include, path
 from rest_framework import routers
 
-from participation.views import QuizViewSet, AnswerViewSet, ScoreViewSet, TaskViewSet
+from participation.views import QuizAPIView, AnswerAPIView, ScoreAPIView, TaskAPIView
 
-router = routers.DefaultRouter()
-
-router.register(r'quiz', QuizViewSet)
-router.register(r'answer', AnswerViewSet)
-router.register(r'score', ScoreViewSet)
-router.register(r'task', TaskViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('quiz/', QuizAPIView.as_view()),
+    path('quiz/<int:pk>/', QuizAPIView.as_view()),      # For retrieve/update/delete by pk
+    path('answer/', AnswerAPIView.as_view()),
+    path('score/', ScoreAPIView.as_view()),
+    path('task/', TaskAPIView.as_view()),
 ]

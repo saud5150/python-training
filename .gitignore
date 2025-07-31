@@ -22,4 +22,4 @@ Thumbs.db
 # Media/static (if generated or collected)
 staticfiles/
 media/
-backend excercise/environment.env
+backend excercise/.env

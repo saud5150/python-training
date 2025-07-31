@@ -11,8 +11,8 @@ class Quiz(BaseModel):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     score = models.DecimalField(null = True, max_digits=5, decimal_places=2)
-    total_questions = models.IntegerField()
-    total_correct = models.IntegerField()
+    total_questions = models.IntegerField(null = True, blank = True)
+    total_correct = models.IntegerField(null = True, blank = True)
     completed_at = models.DateTimeField(null = True, blank = True)
 
     def __str__(self):

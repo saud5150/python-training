@@ -10,14 +10,14 @@ from io import TextIOWrapper
 from base_model import BaseModel
 from users.models import User
 
-class Subject(BaseModel, models.Model):
+class Subject(BaseModel):
     name = models.CharField(max_length=100)
     teachers = models.ManyToManyField(User, limit_choices_to={'role': 'teacher'}, related_name='subjects', blank=True)
 
     def __str__(self):
         return self.name
 
-class Quiz(BaseModel, models.Model):
+class Quiz(BaseModel):
     subject_id = models.ForeignKey(Subject, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -26,7 +26,7 @@ class Quiz(BaseModel, models.Model):
     def __str__(self):
         return self.title
 
-class Question(BaseModel, models.Model):
+class Question(BaseModel):
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     question_text = models.TextField()
     correct_answer = models.TextField()

@@ -1,6 +1,7 @@
-from rest_framework import routers
 from django.urls import path, include
 from .views import (
+    CustomTokenObtainPairView,
+    CustomTokenRefreshView,
     SessionToJWTView,
     StudentRegistrationView,
     TeacherRegistrationView,
@@ -8,19 +9,13 @@ from .views import (
     UserProfileView,
     UserListView,
     UserDetailView,
+    GoogleLogin
 )
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
-from .views import GoogleLogin
-
-# DRF router for ViewSet routing
-# router = routers.DefaultRouter()
-# router.register(r'users', UserViewSet)
 
 urlpatterns = [
     # Token endpoints
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 
     path('accounts/', include('allauth.urls')),
     path('auth/session-to-jwt/', SessionToJWTView.as_view(), name='session_to_jwt'),

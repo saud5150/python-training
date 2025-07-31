@@ -12,8 +12,7 @@ class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = '__all__'
-        lookup_field = 'id'
-
+        
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question

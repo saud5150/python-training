@@ -1,185 +1,285 @@
+from venv import logger
+from django.http import Http404
 from django.shortcuts import get_object_or_404, render
+from jsonschema import ValidationError
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.views import APIView
 from participation.models import Task, Answer, Quiz, Score
+from participation.permissions import AnswerPermission, IsAdminOrReadOnly
 from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
+from participation.base_views import ParticipationBaseView
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
 
 # Create your views here.
 @extend_schema(tags=['Participation'])
-class QuizAPIView(APIView):
+class QuizAPIView(ParticipationBaseView):
     serializer_class = QuizSerializer
-
-    def get_permissions(self):
-        # Only admin can DELETE
-        if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        # All authenticated users can GET (list/retrieve)
-        return [permissions.IsAuthenticated()]
+    permission_classes = [IsAdminOrReadOnly] 
     
     def get(self, request, pk=None):
-        if pk:
-            quiz = get_object_or_404(Quiz, pk=pk)
-            serializer = QuizSerializer(quiz)
-            return Response(serializer.data)
-        quizzes = Quiz.objects.all()
-        serializer = QuizSerializer(quizzes, many = True)
-        return Response(serializer.data)
-    
+        try:
+            if pk:
+                quiz = get_object_or_404(Quiz, pk=pk)
+                serializer = QuizSerializer(quiz)
+                return self.send_successful_response(serializer.data)
+            quizzes = Quiz.objects.all()
+            serializer = QuizSerializer(quizzes, many=True)
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.exception("Unexpected error in GET Quiz:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-    def post(self, request):
-        lookup_field = 'id'  
 
+def post(self, request):
+    try:
         serializer = QuizSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def put(self, request, pk):
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return self.send_201_response(serializer.data)
+    except ValidationError as e:
+        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception("Unexpected error in POST Quiz:")
+        return self.send_bad_response(
+            {"detail": "An unexpected error occurred."},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+def put(self, request, pk):
+    try:
         quiz = get_object_or_404(Quiz, pk=pk)
         serializer = QuizSerializer(quiz, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return self.send_successful_response(serializer.data)
+    except Http404:
+        return self.send_bad_response(
+            {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+        )
+    except ValidationError as e:
+        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception("Unexpected error in PUT Quiz:")
+        return self.send_bad_response(
+            {"detail": "An unexpected error occurred."},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 
     def patch(self, request, pk):
-        quiz = get_object_or_404(Quiz, pk=pk)
-        serializer = QuizSerializer(quiz, data=request.data, partial=True)
-        if serializer.is_valid():
+        try:
+            quiz = get_object_or_404(Quiz, pk=pk)
+            serializer = QuizSerializer(quiz, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PATCH Quiz:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     def delete(self, request, pk):
-        serializer_class = QuizSerializer
-
-        quiz = get_object_or_404(Quiz, pk=pk)
-        quiz.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            try:
+                quiz = get_object_or_404(Quiz, pk=pk)
+                quiz.delete()
+                return self.send_no_content_response()
+            except Http404:
+                return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                logger.exception("Unexpected error on DELETE Quiz:")
+                return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @extend_schema(tags=['Participation', 'Answer'])
-class AnswerAPIView(APIView):
+class AnswerAPIView(ParticipationBaseView):
     serializer_class = AnswerSerializer
+    permission_classes = [AnswerPermission]
+
     def get(self, request, pk=None):
-        if pk:
-            answer = get_object_or_404(Answer, pk=pk)
-            serializer = AnswerSerializer(answer)
-            return Response(serializer.data)
-        answers = Answer.objects.all()
-        serializer = AnswerSerializer(answers, many=True)
-        return Response(serializer.data)
+        try:
+            if pk:
+                answer = get_object_or_404(Answer, pk=pk)
+                serializer = AnswerSerializer(answer)
+                return self.send_successful_response(serializer.data)
+            answers = Answer.objects.all()
+            serializer = AnswerSerializer(answers, many=True)
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.exception("Unexpected error in GET Answer:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def post(self, request):
-        serializer = AnswerSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            serializer = AnswerSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_201_response(serializer.data)
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in POST Answer:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request, pk):
-        answer = get_object_or_404(Answer, pk=pk)
-        serializer = AnswerSerializer(answer, data=request.data)
-        if serializer.is_valid():
+        try:
+            answer = get_object_or_404(Answer, pk=pk)
+            serializer = AnswerSerializer(answer, data=request.data)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PUT Answer:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def patch(self, request, pk):
-        answer = get_object_or_404(Answer, pk=pk)
-        serializer = AnswerSerializer(answer, data=request.data, partial=True)
-        if serializer.is_valid():
+        try:
+            answer = get_object_or_404(Answer, pk=pk)
+            serializer = AnswerSerializer(answer, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PATCH Answer:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def delete(self, request, pk):
-        answer = get_object_or_404(Answer, pk=pk)
-        answer.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
+        try:
+            answer = get_object_or_404(Answer, pk=pk)
+            answer.delete()
+            return self.send_no_content_response()
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.exception("Unexpected error in DELETE Answer:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 @extend_schema(tags=['Participation', 'Score'])
-class ScoreAPIView(APIView):
+class ScoreAPIView(ParticipationBaseView):
     permission_classes = [IsAdminOrTeacher]
     serializer_class = ScoreSerializer
     def get(self, request, pk=None):
         if pk:
             score = get_object_or_404(Score, pk=pk)
             serializer = ScoreSerializer(score)
-            return Response(serializer.data)
+            return self.send_successful_response(serializer.data)
         scores = Score.objects.all()
         serializer = ScoreSerializer(scores, many=True)
-        return Response(serializer.data)
+        return self.send_successful_response(serializer.data)
 
     def post(self, request):
         serializer = ScoreSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_201_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def put(self, request, pk):
         score = get_object_or_404(Score, pk=pk)
         serializer = ScoreSerializer(score, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def patch(self, request, pk):
         score = get_object_or_404(Score, pk=pk)
         serializer = ScoreSerializer(score, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def delete(self, request, pk):
         score = get_object_or_404(Score, pk=pk)
         score.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.send_no_content_response()
 
 @extend_schema(tags=['Participation', 'Task'])
-class TaskAPIView(APIView):
-
+class TaskAPIView(ParticipationBaseView):
+    permission_classes = [IsAdminOrReadOnly]
     serializer_class = TaskSerializer
     def get(self, request, pk=None):
         if pk:
             task = get_object_or_404(Task, pk=pk)
             serializer = TaskSerializer(task)
-            return Response(serializer.data)
+            return self.send_successful_response(serializer.data)
         tasks = Task.objects.all()
         serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data)
+        return self.send_successful_response(serializer.data)
 
     def post(self, request):
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_201_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def put(self, request, pk):
         task = get_object_or_404(Task, pk=pk)
         serializer = TaskSerializer(task, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def patch(self, request, pk):
         task = get_object_or_404(Task, pk=pk)
         serializer = TaskSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.send_successful_response(serializer.data)
+        return self.send_bad_response(serializer.errors)
 
     def delete(self, request, pk):
         task = get_object_or_404(Task, pk=pk)
         task.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.send_no_content_response()

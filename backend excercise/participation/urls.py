@@ -7,6 +7,7 @@ from participation.views import QuizAPIView, AnswerAPIView, ScoreAPIView, TaskAP
 
 urlpatterns = [
     path('quiz/', QuizAPIView.as_view()),
+    path('quiz/<int:pk>/', QuizAPIView.as_view()),      # For retrieve/update/delete by pk
     path('answer/', AnswerAPIView.as_view()),
     path('score/', ScoreAPIView.as_view()),
     path('task/', TaskAPIView.as_view()),

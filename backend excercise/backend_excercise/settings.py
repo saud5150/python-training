@@ -214,9 +214,14 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'users.User'
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_SIGNUP_FIELDS = [
+    'email*',        # required field
+    'password1*',    # required field (first password input)
+    'password2*',    # required field (password repeat)
+    # 'username',    # optional; omit or add without * if not using
+]
+
+ACCOUNT_LOGIN_METHODS = {"email"}
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
 EMAIL_HOST = os.getenv('EMAIL_HOST')              # Your SMTP server

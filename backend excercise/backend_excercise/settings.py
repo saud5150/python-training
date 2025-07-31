@@ -16,7 +16,7 @@ import os
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(os.path.join(BASE_DIR, "environment.env"))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,27 +37,38 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.sites',  # Required by allauth
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
+    # Django core apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required by allauth
+
+    # Third-party authentication apps
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+
+    # Third-party REST/DRF apps
     "rest_framework",
-    'rest_framework_simplejwt',
-    'dj_rest_auth',
-    'dj_rest_auth.registration',
+    "rest_framework_simplejwt",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
+    "drf_spectacular",
+
+    # Development and utilities
+    "django_extensions",
+
+    # Project/local apps
     "quiz",
     "users",
     "participation",
-    'django_extensions',
-    'drf_spectacular',
 ]
+
+
 SITE_ID = 1  # Required by django-allauth
 
 AUTHENTICATION_BACKENDS = (
@@ -196,7 +207,6 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for Quiz project.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-    # ... other options as needed
 }
 
 
@@ -231,5 +241,3 @@ REST_AUTH_SERIALIZERS = {
 SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'
-
-FERNET_SECRET_KEY = os.getenv('FERNET_SECRET_KEY')

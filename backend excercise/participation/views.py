@@ -5,16 +5,16 @@ from jsonschema import ValidationError
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.views import APIView
+from base_view import BaseView
 from participation.models import Task, Answer, Quiz, Score
 from participation.permissions import AnswerPermission, IsAdminOrReadOnly, IsAdminOrReadUpdate
 from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
-from participation.base_views import ParticipationBaseView
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
 
 # Create your views here.
 @extend_schema(tags=['Participation'])
-class QuizAPIView(ParticipationBaseView):
+class QuizAPIView(BaseView):
     serializer_class = QuizSerializer
     permission_classes = [IsAdminOrReadOnly] 
     
@@ -76,38 +76,38 @@ def put(self, request, pk):
         )
 
 
-    def patch(self, request, pk):
+def patch(self, request, pk):
+    try:
+        quiz = get_object_or_404(Quiz, pk=pk)
+        serializer = QuizSerializer(quiz, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return self.send_successful_response(serializer.data)
+    except Http404:
+        return self.send_bad_response(
+            {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+        )
+    except ValidationError as e:
+        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.exception("Unexpected error in PATCH Quiz:")
+        return self.send_bad_response(
+            {"detail": "An unexpected error occurred."},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+def delete(self, request, pk):
         try:
             quiz = get_object_or_404(Quiz, pk=pk)
-            serializer = QuizSerializer(quiz, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            quiz.delete()
+            return self.send_no_content_response()
         except Http404:
-            return self.send_bad_response(
-                {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
-            )
-        except ValidationError as e:
-            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+            return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.exception("Unexpected error in PATCH Quiz:")
-            return self.send_bad_response(
-                {"detail": "An unexpected error occurred."},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    def delete(self, request, pk):
-            try:
-                quiz = get_object_or_404(Quiz, pk=pk)
-                quiz.delete()
-                return self.send_no_content_response()
-            except Http404:
-                return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
-            except Exception as e:
-                logger.exception("Unexpected error on DELETE Quiz:")
-                return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Unexpected error on DELETE Quiz:")
+            return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @extend_schema(tags=['Participation', 'Answer'])
-class AnswerAPIView(ParticipationBaseView):
+class AnswerAPIView(BaseView):
     serializer_class = AnswerSerializer
     permission_classes = [AnswerPermission]
 
@@ -203,7 +203,7 @@ class AnswerAPIView(ParticipationBaseView):
             )
 
 @extend_schema(tags=['Participation', 'Score'])
-class ScoreAPIView(ParticipationBaseView):
+class ScoreAPIView(BaseView):
     permission_classes = [IsAdminOrTeacher]
     serializer_class = ScoreSerializer
     def get(self, request, pk=None):
@@ -244,7 +244,7 @@ class ScoreAPIView(ParticipationBaseView):
         return self.send_no_content_response()
 
 @extend_schema(tags=['Participation', 'Task'])
-class TaskAPIView(ParticipationBaseView):
+class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer
     def get(self, request, pk=None):

@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 
 
-class ParticipationBaseView(APIView):
+class BaseView(APIView):
     """
     Base view class for participation app with common response methods.
     """

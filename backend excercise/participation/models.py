@@ -41,11 +41,20 @@ class Task(BaseModel):
         REMINDER = 'reminder', 'Reminder'
         TODO = 'todo', 'To-Do'
 
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    class TaskStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'            # Task created, not started yet
+        IN_PROGRESS = 'in_progress', 'In Progress' # Work ongoing
+        COMPLETED = 'completed', 'Completed'      # Task is finished
+        OVERDUE = 'overdue', 'Overdue'            # Due date passed, not completed
+        CANCELLED = 'cancelled', 'Cancelled'      # Task was cancelled/removed
+
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, default=uuid.uuid4)
     user_quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE, null = True, blank = True)
     title = models.CharField(max_length=50)
     description = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=20,
+                              choices=TaskStatus.choices,
+                              default=TaskStatus.PENDING)
     due_date = models.DateTimeField()
     type = models.CharField(
         max_length=20,

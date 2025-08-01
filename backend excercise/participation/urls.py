@@ -11,4 +11,5 @@ urlpatterns = [
     path('answer/', AnswerAPIView.as_view()),
     path('score/', ScoreAPIView.as_view()),
     path('task/', TaskAPIView.as_view()),
+    path('task/<uuid:pk>/', TaskAPIView.as_view()),
 ]

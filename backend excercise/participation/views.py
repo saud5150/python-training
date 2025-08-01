@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.views import APIView
 from participation.models import Task, Answer, Quiz, Score
-from participation.permissions import AnswerPermission, IsAdminOrReadOnly
+from participation.permissions import AnswerPermission, IsAdminOrReadOnly, IsAdminOrReadUpdate
 from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
 from participation.base_views import ParticipationBaseView
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
@@ -245,41 +245,70 @@ class ScoreAPIView(ParticipationBaseView):
 
 @extend_schema(tags=['Participation', 'Task'])
 class TaskAPIView(ParticipationBaseView):
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer
     def get(self, request, pk=None):
-        if pk:
-            task = get_object_or_404(Task, pk=pk)
-            serializer = TaskSerializer(task)
+        try:
+            if pk:
+                task = get_object_or_404(Task, pk=pk)
+                
+                serializer = TaskSerializer(task)
+                return self.send_successful_response(serializer.data)
+            tasks = Task.objects.all()
+            serializer = TaskSerializer(tasks, many=True)
             return self.send_successful_response(serializer.data)
-        tasks = Task.objects.all()
-        serializer = TaskSerializer(tasks, many=True)
-        return self.send_successful_response(serializer.data)
+        except Http404:
+            return Response(
+                {'detail': 'Task not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return self.send_exception_response(e, "An error occurred while retrieving tasks")
 
     def post(self, request):
-        serializer = TaskSerializer(data=request.data)
-        if serializer.is_valid():
+        try:
+            serializer = TaskSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
             return self.send_201_response(serializer.data)
-        return self.send_bad_response(serializer.errors)
+        except Exception as e:
+            return self.send_exception_response(e, "An error occurred while creating the task")
 
     def put(self, request, pk):
-        task = get_object_or_404(Task, pk=pk)
-        serializer = TaskSerializer(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+        try:
+            task = get_object_or_404(Task, pk=pk)
+            serializer = TaskSerializer(task, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return self.send_successful_response(serializer.data)
+        except Http404:
+            # Explicit 404 handling
+            return Response({'detail': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return self.send_exception_response(e, "An error occurred while updating the task")
         return self.send_bad_response(serializer.errors)
 
     def patch(self, request, pk):
-        task = get_object_or_404(Task, pk=pk)
-        serializer = TaskSerializer(task, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+        try:
+            task = get_object_or_404(Task, pk=pk)
+            serializer = TaskSerializer(task, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return self.send_successful_response(serializer.data)
+        except Http404:
+            # Explicit 404 handling
+            return Response({'detail': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return self.send_exception_response(e, "An error occurred while updating the task")
         return self.send_bad_response(serializer.errors)
 
     def delete(self, request, pk):
-        task = get_object_or_404(Task, pk=pk)
-        task.delete()
+        try:
+            task = get_object_or_404(Task, pk=pk)
+            task.delete()
+        except Http404:
+            # Explicit 404 handling
+            return Response({'detail': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return self.send_exception_response(e, "An error occurred while deleting the task")
         return self.send_no_content_response()

@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+SAFE_METHODS_TASK = ('GET', 'PATCH')
+
 class IsAdminOrReadOnly(BasePermission):
     """
     The request is permitted if:
@@ -42,3 +44,18 @@ class AnswerPermission(BasePermission):
         if user.role == 'student':
             return obj.user_quiz_id.user_id == user  # assuming user_quiz_id links to user
         return False
+
+class IsAdminOrReadUpdate(BasePermission):
+    """
+    Custom permission to only allow admins to edit objects,
+    while read-only access is granted to all authenticated users.
+    """
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS_TASK:
+            return request.user and request.user.is_authenticated
+        return request.user and request.user.is_authenticated and request.user.role == 'admin'
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS_TASK:
+            return request.user and request.user.is_authenticated
+        return request.user and request.user.is_authenticated and request.user.role == 'admin'

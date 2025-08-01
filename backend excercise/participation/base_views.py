@@ -1,3 +1,4 @@
+import logging
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -57,3 +58,30 @@ class ParticipationBaseView(APIView):
             Response object with 204 status code
         """
         return Response(status=status.HTTP_204_NO_CONTENT) 
+    
+    def send_exception_response(self, exc, description="An error occurred", status_code=None):
+        """
+        Standardized error response for exceptions.
+
+        Args:
+            exc (Exception): The caught exception instance.
+            description (str): Optional human-readable description.
+            status_code (int): HTTP status code. Default to 500 if not provided.
+
+        Returns:
+            DRF Response with formatted error.
+        """
+        # log the exception here for debugging
+        logging.error(f"Exception: {exc}", exc_info=True)
+
+        if status_code is None:
+            # Default to 500 internal server error if no specific status provided
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        return Response(
+            {
+                "description": description,
+                "errors": str(exc),
+            },
+            status=status_code,
+        )

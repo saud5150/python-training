@@ -1,7 +1,7 @@
 from venv import logger
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
-from jsonschema import ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.views import APIView
@@ -38,73 +38,72 @@ class QuizAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-def post(self, request):
-    try:
-        serializer = QuizSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return self.send_201_response(serializer.data)
-    except ValidationError as e:
-        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        logger.exception("Unexpected error in POST Quiz:")
-        return self.send_bad_response(
-            {"detail": "An unexpected error occurred."},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-def put(self, request, pk):
-    try:
-        quiz = get_object_or_404(Quiz, pk=pk)
-        serializer = QuizSerializer(quiz, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return self.send_successful_response(serializer.data)
-    except Http404:
-        return self.send_bad_response(
-            {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
-        )
-    except ValidationError as e:
-        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        logger.exception("Unexpected error in PUT Quiz:")
-        return self.send_bad_response(
-            {"detail": "An unexpected error occurred."},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+    def post(self, request):
+        try:
+            serializer = QuizSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_201_response(serializer.data)
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in POST Quiz:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
-def patch(self, request, pk):
-    try:
-        quiz = get_object_or_404(Quiz, pk=pk)
-        serializer = QuizSerializer(quiz, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return self.send_successful_response(serializer.data)
-    except Http404:
-        return self.send_bad_response(
-            {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
-        )
-    except ValidationError as e:
-        return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        logger.exception("Unexpected error in PATCH Quiz:")
-        return self.send_bad_response(
-            {"detail": "An unexpected error occurred."},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-def delete(self, request, pk):
+    def put(self, request, pk):
         try:
             quiz = get_object_or_404(Quiz, pk=pk)
-            quiz.delete()
-            return self.send_no_content_response()
+            serializer = QuizSerializer(quiz, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_successful_response(serializer.data)
         except Http404:
-            return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
+            return self.send_bad_response(
+                {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.exception("Unexpected error on DELETE Quiz:")
-            return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Unexpected error in PUT Quiz:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+    def patch(self, request, pk):
+        try:
+            quiz = get_object_or_404(Quiz, pk=pk)
+            serializer = QuizSerializer(quiz, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PATCH Quiz:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    def delete(self, request, pk):
+            try:
+                quiz = get_object_or_404(Quiz, pk=pk)
+                quiz.delete()
+                return self.send_no_content_response()
+            except Http404:
+                return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                logger.exception("Unexpected error on DELETE Quiz:")
+                return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @extend_schema(tags=['Participation', 'Answer'])
 class AnswerAPIView(BaseView):

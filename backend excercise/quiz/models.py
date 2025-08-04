@@ -6,9 +6,9 @@ from rest_framework.response import Response
 from rest_framework import status
 import csv
 from io import TextIOWrapper
-
 from base_model import BaseModel
 from users.models import User
+from django.apps import apps
 
 class Subject(BaseModel):
     name = models.CharField(max_length=100)
@@ -25,11 +25,23 @@ class Quiz(BaseModel):
 
     def __str__(self):
         return self.title
+    
 
 class Question(BaseModel):
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     question_text = models.TextField()
     correct_answer = models.TextField()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Dynamically get participation model to avoid circular import
+        QuizParticipation = apps.get_model('participation', 'Quiz')  # adjust 'Quiz' to your participation model name
+        
+        participations = QuizParticipation.objects.filter(quiz_id=self.quiz_id)
+        count = self.quiz_id.question_set.count()
+        for participation in participations:
+            participation.total_questions = count
+            participation.save(update_fields=['total_questions'])  
 
     def __str__(self):
         return f"Q: {self.question_text[:50]}..."

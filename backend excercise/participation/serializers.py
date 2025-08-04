@@ -1,3 +1,4 @@
+from django.apps import apps
 from rest_framework import serializers
 from participation.models import *
 
@@ -44,6 +45,33 @@ class AnswerSerializer(serializers.ModelSerializer):
         # Inject the computed value into validated_data
         data['is_correct'] = is_correct
         return data
+
+    def update_total_correct(self, user_quiz_id):
+            """Helper method to update total_correct on participation"""
+            QuizParticipation = apps.get_model('participation', 'Quiz')  # adjust as needed
+            try:
+                participation = QuizParticipation.objects.get(id=user_quiz_id.id)
+            except QuizParticipation.DoesNotExist:
+                return
+
+            # Count all correct answers for this participation
+            total_correct_count = Answer.objects.filter(
+                user_quiz_id=participation,
+                is_correct=True
+            ).count()
+
+            participation.total_correct = total_correct_count
+            participation.save(update_fields=['total_correct'])
+
+    def create(self, validated_data):
+        answer = super().create(validated_data)
+        self.update_total_correct(answer.user_quiz_id)
+        return answer
+
+    def update(self, instance, validated_data):
+        answer = super().update(instance, validated_data)
+        self.update_total_correct(answer.user_quiz_id)
+        return answer
 
 
 class ScoreSerializer(serializers.ModelSerializer):

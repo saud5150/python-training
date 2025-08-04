@@ -6,6 +6,22 @@ class QuizSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = '__all__'
 
+    def create(self, validated_data):
+        # Automatically set the total questions and total correct based on the quiz
+        quiz_instance = validated_data['quiz_id']
+        validated_data['total_questions'] = quiz_instance.question_set.count()
+        # validated_data['total_correct'] = quiz_instance.total_correct
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+
+        if 'quiz_id' in validated_data:
+            quiz_instance = validated_data['quiz_id']
+        else:
+            quiz_instance = instance.quiz_id
+        
+        validated_data['total_questions'] = quiz_instance.question_set.count()
+        return super().update(instance, validated_data)
 
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:

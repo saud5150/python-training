@@ -1,7 +1,7 @@
 from django.apps import apps
 from rest_framework import serializers
 from participation.models import *
-
+from django.db.models import Sum
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
@@ -110,8 +110,8 @@ class ScoreSerializer(serializers.ModelSerializer):
             user_id=user,
             quiz_id__subject_id=subject
         ).aggregate(
-            total_correct=serializers.Sum('total_correct'),
-            total_questions=serializers.Sum('total_questions')
+            total_correct=Sum('total_correct'),
+            total_questions=Sum('total_questions')
         )
 
         total_correct = aggregates.get('total_correct') or 0

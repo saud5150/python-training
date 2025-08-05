@@ -11,9 +11,10 @@ from participation.permissions import AnswerPermission, IsAdminOrReadOnly, IsAdm
 from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
+from django.db.models import Sum, Count
 
 # Create your views here.
-@extend_schema(tags=['Participation'])
+@extend_schema(tags=['Participation/ Quiz'])
 class QuizAPIView(BaseView):
     serializer_class = QuizSerializer
     permission_classes = [IsAdminOrReadOnly] 
@@ -105,7 +106,7 @@ class QuizAPIView(BaseView):
                 logger.exception("Unexpected error on DELETE Quiz:")
                 return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@extend_schema(tags=['Participation', 'Answer'])
+@extend_schema(tags=['Participation/ Answer'])
 class AnswerAPIView(BaseView):
     serializer_class = AnswerSerializer
     permission_classes = [AnswerPermission]
@@ -134,7 +135,21 @@ class AnswerAPIView(BaseView):
         try:
             serializer = AnswerSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            answer = serializer.save()
+            # After saving the answer, update the Score
+            user = answer.user_quiz_id.user_id
+            quiz = answer.user_quiz_id.quiz_id
+            subject = quiz.subject_id  # Adjust if your Quiz model uses a different field name
+
+            # Calculate aggregate score for this user and subject
+            user_quizzes = Quiz.objects.filter(user_id=user, quiz_id__subject_id=subject)
+            total_score = user_quizzes.aggregate(total=Sum('score'))['total'] or 0
+
+            Score.objects.update_or_create(
+                user_id=user,
+                subject_id=subject,
+                defaults={'aggregate_score': total_score}
+            )
             return self.send_201_response(serializer.data)
         except ValidationError as e:
             return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
@@ -201,7 +216,7 @@ class AnswerAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-@extend_schema(tags=['Participation', 'Score'])
+@extend_schema(tags=['Participation/ Score'])
 class ScoreAPIView(BaseView):
     permission_classes = [IsAdminOrTeacher]
     serializer_class = ScoreSerializer
@@ -242,7 +257,7 @@ class ScoreAPIView(BaseView):
         score.delete()
         return self.send_no_content_response()
 
-@extend_schema(tags=['Participation', 'Task'])
+@extend_schema(tags=['Participation/ Task'])
 class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer

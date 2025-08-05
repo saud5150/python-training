@@ -16,11 +16,11 @@ class Quiz(BaseModel):
     completed_at = models.DateTimeField(null = True, blank = True)
 
     def save(self, *args, **kwargs):
-            if self.total_questions and self.total_correct is not None and self.total_questions > 0:
-                self.score = round(self.total_correct / self.total_questions, 4)
-            else:
-                self.score = None
-            super().save(*args, **kwargs)
+        if self.total_questions and self.total_correct is not None and self.total_questions > 0:
+            self.score = round((self.total_correct / self.total_questions) * 100, 2)
+        else:
+            self.score = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user_id} - {self.quiz_id} ({self.score})"
@@ -40,11 +40,12 @@ class Score(BaseModel):
     aggregate_score = models.DecimalField(max_digits=5, decimal_places=2)
 
     def save(self, *args, **kwargs):
-                if self.total_questions and self.total_correct is not None and self.total_questions > 0:
-                    self.score = round(self.total_correct / self.total_questions, 4)
-                else:
-                    self.score = None
-                super().save(*args, **kwargs)
+        # Example: aggregate all quiz scores for this user and subject
+        from django.db.models import Sum
+        quizzes = Quiz.objects.filter(user_id=self.user_id, quiz_id__subject_id=self.subject_id)
+        total_score = quizzes.aggregate(total=Sum('score'))['total'] or 0
+        self.aggregate_score = total_score
+        super().save(*args, **kwargs)
     def __str__(self):
         return f"{self.user_id} - {self.subject_id}: {self.aggregate_score}"
     

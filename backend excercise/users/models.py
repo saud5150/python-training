@@ -38,6 +38,3 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['name']
 
     objects = UserManager()
-    @property
-    def id(self):
-        return self.id

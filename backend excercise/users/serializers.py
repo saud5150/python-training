@@ -20,9 +20,17 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+        # Remove many-to-many fields if present
+        groups = validated_data.pop('groups', [])
+        user_permissions = validated_data.pop('user_permissions', [])
         user = User(**validated_data)
         user.set_password(password)  # This hashes the password!
         user.save()
+        # Set many-to-many fields after save
+        if groups:
+            user.groups.set(groups)
+        if user_permissions:
+            user.user_permissions.set(user_permissions)
         # Send welcome email after user is created
         # 📨 Email sent from utility
         if not send_registration_email(user, password):

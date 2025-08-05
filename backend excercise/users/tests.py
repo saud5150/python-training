@@ -1,134 +1,226 @@
-# Create your tests here.
-from django.test import TestCase, Client
+import pytest
 from django.urls import reverse
-from users.models import User
-from quiz.models import Subject, Quiz
-from participation.models import Task
+from rest_framework import status
 from rest_framework.test import APIClient
-from datetime import timedelta
-from django.utils import timezone
-from participation.models import Quiz as ParticipationQuiz
+from users.models import User
 
-# Create your tests here.
+pytestmark = pytest.mark.django_db
 
-class UserFlowTests(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        # Create users
-        self.admin = User.objects.create_user(email='admin@example.com', name='Admin', password='adminpass', role='admin')
-        self.teacher = User.objects.create_user(email='teacher@example.com', name='Teacher', password='teacherpass', role='teacher')
-        self.ta = User.objects.create_user(email='ta@example.com', name='TA', password='tapass', role='student')
-        self.student = User.objects.create_user(email='student@example.com', name='Student', password='studentpass', role='student')
+# ------------------ Fixtures ------------------
 
-    def authenticate(self, user):
-        self.client.force_authenticate(user=user)
+@pytest.fixture
+def admin_user():
+    return User.objects.create_superuser(
+        email='admin@example.com',
+        name='Admin',
+        password='admin123',
+        role=User.RoleType.ADMIN
 
-    def test_admin_adds_courses_teachers_students(self):
-        self.authenticate(self.admin)
-        # Admin adds a course
-        response = self.client.post(reverse('subject-list'), {'name': 'Math'})
-        self.assertEqual(response.status_code, 201)
-        subject_id = response.data['id']
-        # Admin adds teachers and students (already done in setUp)
-        self.assertEqual(User.objects.filter(role='teacher').count(), 1)
-        self.assertEqual(User.objects.filter(role='student').count(), 2)  # student + ta
+    )
+@pytest.fixture
+def teacher_user():
+    return User.objects.create_user(
+        email='teacher@example.com',
+        name='Teacher',
+        password='teacher123',
+        role=User.RoleType.TEACHER
+    )
 
-    def test_admin_assigns_teacher_to_course(self):
-        self.authenticate(self.admin)
-        subject = Subject.objects.create(name='Science')
-        subject.teachers.add(self.teacher)
-        self.assertIn(self.teacher, subject.teachers.all())
+@pytest.fixture
+def teacher_client(client, teacher_user):
+    client.force_authenticate(user=teacher_user)
+    return client
+@pytest.fixture
+def student_user():
+    return User.objects.create_user(
+        email='student@example.com',
+        name='Student',
+        password='student123'
+    )
 
-    def test_admin_assigns_teacher_task_to_create_quiz(self):
-        self.authenticate(self.admin)
-        # Admin assigns a task to teacher to create a quiz
-        due = timezone.now() + timedelta(days=2)
-        task = Task.objects.create(
-            user_id=self.teacher,
-            title='Create Quiz',
-            description='Create a quiz for Science',
-            status='pending',
-            due_date=due,
-            type='quiz'
-        )
-        self.assertEqual(task.user_id, self.teacher)
-        self.assertEqual(task.type, 'quiz')
+@pytest.fixture
+def client():
+    return APIClient()
 
-    def test_teacher_creates_task_for_ta_to_attempt_quiz(self):
-        self.authenticate(self.teacher)
-        subject = Subject.objects.create(name='English')
-        quiz = Quiz.objects.create(subject_id=subject, title='Quiz 1', description='Desc', assigned_teacher=self.teacher)
-        from participation.models import Quiz as ParticipationQuiz
-        participation_quiz = ParticipationQuiz.objects.create(
-            user_id=self.ta,
-            quiz_id=quiz,
-            score=None,
-            total_questions=10,
-            total_correct=0,
-            completed_at=None
-        )
-        due = timezone.now() + timedelta(days=1)
-        task = Task.objects.create(
-            user_id=self.ta,
-            user_quiz_id=participation_quiz,
-            title='Attempt Quiz',
-            description='TA should attempt the quiz',
-            status='assigned',
-            due_date=due,
-            type='quiz'
-        )
-        self.assertEqual(task.user_id, self.ta)
-        self.assertEqual(task.user_quiz_id, participation_quiz)
+@pytest.fixture
+def auth_client(client, admin_user):
+    client.force_authenticate(user=admin_user)
+    return client
 
-    def test_student_performs_quiz_within_deadline(self):
-        self.authenticate(self.student)
-        subject = Subject.objects.create(name='History')
-        quiz = Quiz.objects.create(subject_id=subject, title='Quiz 2', description='Desc', assigned_teacher=self.teacher)
-        # Simulate student performing quiz (participation logic)
-        from participation.models import Quiz as ParticipationQuiz
-        pq = ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz, score=8, total_questions=10, total_correct=8, completed_at=timezone.now())
-        self.assertEqual(pq.user_id, self.student)
-        self.assertEqual(pq.quiz_id, quiz)
+@pytest.fixture
+def student_client(client, student_user):
+    client.force_authenticate(user=student_user)
+    return client
 
-    def test_teacher_adds_scores_after_deadline(self):
-        self.authenticate(self.teacher)
-        subject = Subject.objects.create(name='Geo')
-        quiz = Quiz.objects.create(subject_id=subject, title='Quiz 3', description='Desc', assigned_teacher=self.teacher)
-        from participation.models import Quiz as ParticipationQuiz
-        pq = ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz, score=None, total_questions=10, total_correct=0, completed_at=None)
-        # After deadline, teacher adds score
-        pq.score = 7
-        pq.completed_at = timezone.now()
-        pq.save()
-        self.assertEqual(pq.score, 7)
+# ------------------ Serializer Tests ------------------
 
-    def test_teacher_admin_calculate_aggregates(self):
-        self.authenticate(self.admin)
-        subject = Subject.objects.create(name='Bio')
-        quiz1 = Quiz.objects.create(subject_id=subject, title='Quiz 1', description='Desc', assigned_teacher=self.teacher)
-        quiz2 = Quiz.objects.create(subject_id=subject, title='Quiz 2', description='Desc', assigned_teacher=self.teacher)
-        from participation.models import Quiz as ParticipationQuiz, Score
-        ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz1, score=9, total_questions=10, total_correct=9, completed_at=timezone.now())
-        ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz2, score=8, total_questions=10, total_correct=8, completed_at=timezone.now())
-        # Calculate aggregate
-        total = sum(pq.score for pq in ParticipationQuiz.objects.filter(user_id=self.student, quiz_id__subject_id=subject))
-        Score.objects.create(user_id=self.student, subject_id=subject, aggregate_score=total)
-        agg = Score.objects.get(user_id=self.student, subject_id=subject)
-        self.assertEqual(agg.aggregate_score, 17)
+from users.serializers import UserSerializer
 
-    def test_course_quiz_and_student_course_relationships(self):
-        self.authenticate(self.admin)
-        subject = Subject.objects.create(name='CS')
-        quiz1 = Quiz.objects.create(subject_id=subject, title='Quiz 1', description='Desc', assigned_teacher=self.teacher)
-        quiz2 = Quiz.objects.create(subject_id=subject, title='Quiz 2', description='Desc', assigned_teacher=self.teacher)
-        self.assertEqual(subject.quiz_set.count(), 2)
-        # Student takes multiple courses
-        subject2 = Subject.objects.create(name='Maths')
-        subject2.teachers.add(self.teacher)
-        # Simulate enrollment (if you have an enrollment model, use it; else, just logic)
-        # Here, just check that student can participate in quizzes from multiple subjects
-        from participation.models import Quiz as ParticipationQuiz
-        pq1 = ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz1, score=10, total_questions=10, total_correct=10, completed_at=timezone.now())
-        pq2 = ParticipationQuiz.objects.create(user_id=self.student, quiz_id=quiz2, score=9, total_questions=10, total_correct=9, completed_at=timezone.now())
-        self.assertEqual(pq1.user_id, self.student)
-        self.assertEqual(pq2.user_id, self.student)
+def test_user_serializer_valid_data():
+    data = {
+        'email': 'serialtest@example.com',
+        'name': 'Ser Test',
+        'password': 'pw1234'
+    }
+    serializer = UserSerializer(data=data)
+    assert serializer.is_valid(), serializer.errors
+    user = serializer.save()
+    assert user.email == data['email']
+    assert user.check_password(data['password'])
+
+def test_user_serializer_invalid_email():
+    data = {
+        'email': 'notanemail',
+        'name': 'Test User',
+        'password': 'pw12345'
+    }
+    serializer = UserSerializer(data=data)
+    assert not serializer.is_valid()
+    assert 'email' in serializer.errors
+
+# ------------------ User Registration API ------------------
+
+def test_admin_can_register_student(auth_client):
+    url = reverse('register-student')
+    data = {
+        'email': 'regstudent@example.com',
+        'name': 'Reg Student',
+        'password': 'pass1234'
+    }
+    response = auth_client.post(url, data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert User.objects.filter(email='regstudent@example.com', role=User.RoleType.STUDENT).count() == 1
+
+def test_admin_can_register_teacher(auth_client):
+    url = reverse('register-teacher')
+    data = {
+        'email': 'regteacher@example.com',
+        'name': 'Reg Teacher',
+        'password': 'pass1234'
+    }
+    response = auth_client.post(url, data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert User.objects.filter(email='regteacher@example.com', role=User.RoleType.TEACHER).count() == 1
+
+def test_admin_can_register_admin(auth_client):
+    url = reverse('register-admin')
+    data = {
+        'email': 'regadmin@example.com',
+        'name': 'Reg Admin',
+        'password': 'pass1234'
+    }
+    response = auth_client.post(url, data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert User.objects.filter(email='regadmin@example.com', role=User.RoleType.ADMIN).count() == 1
+
+def test_registration_requires_admin(client):
+    # Not authenticated
+    url = reverse('register-student')
+    data = {'email': 'noadmin@example.com', 'name': 'NoAdmin', 'password': 'pw'}
+    response = client.post(url, data)
+    assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+
+# ------------------ User List & Detail Endpoints ------------------
+
+def test_admin_can_list_users(auth_client):
+    url = reverse('user-list-create')
+    response = auth_client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(response.data, list)
+
+def test_student_cannot_list_users(student_client):
+    url = reverse('user-list-create')
+    response = student_client.get(url)
+    assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_401_UNAUTHORIZED]
+
+def test_admin_can_retrieve_update_delete_user(auth_client, student_user):
+    url = reverse('user-detail', args=[str(student_user.id)])
+
+    # Retrieve
+    response = auth_client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data['email'] == student_user.email
+
+    # Update
+    patch_data = {'name': 'Updated Student'}
+    response = auth_client.patch(url, patch_data)
+    assert response.status_code == status.HTTP_200_OK
+    student_user.refresh_from_db()
+    assert student_user.name == 'Updated Student'
+
+    # Delete
+    response = auth_client.delete(url)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not User.objects.filter(email=student_user.email).exists()
+
+# ------------------ Profile Endpoint (self only) ------------------
+
+def test_teacher_can_access_profile(teacher_client, teacher_user):
+    url = reverse('profile')
+    response = teacher_client.get(url)
+    assert response.status_code == 200
+    assert response.data['email'] == teacher_user.email
+
+    response = teacher_client.patch(url, {'name': 'New Name'})
+    assert response.status_code == 200
+    teacher_user.refresh_from_db()
+    assert teacher_user.name == 'New Name'
+
+def test_admin_can_access_profile(auth_client, admin_user):
+    url = reverse('profile')
+    response = auth_client.get(url)
+    assert response.status_code == 200
+    assert response.data['email'] == admin_user.email
+
+def test_student_cannot_access_profile(student_client):
+    url = reverse('profile')
+    response = student_client.get(url)
+    assert response.status_code == 403
+    response = student_client.patch(url, {'name': 'Hacker'})
+    assert response.status_code == 403
+
+
+# ------------------ Authentication Endpoints ------------------
+
+def test_token_obtain(admin_user, client):
+    url = reverse('token_obtain_pair')
+    data = {'email': admin_user.email, 'password': 'admin123'}
+    response = client.post(url, data)
+    assert response.status_code == 200
+    assert 'access' in response.data and 'refresh' in response.data
+
+def test_token_invalid_password(admin_user, client):
+    url = reverse('token_obtain_pair')
+    data = {'email': admin_user.email, 'password': 'wrongpw'}
+    response = client.post(url, data)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+def test_token_refresh(admin_user, client):
+    obtain_url = reverse('token_obtain_pair')
+    refresh_url = reverse('token_refresh')
+    obtain_resp = client.post(obtain_url, {'email': admin_user.email, 'password': 'admin123'})
+    refresh_token = obtain_resp.data['refresh']
+    response = client.post(refresh_url, {'refresh': refresh_token})
+    assert response.status_code == 200
+    assert 'access' in response.data
+
+# ------------------ Misc and Edge Cases ------------------
+
+def test_user_password_is_hashed(auth_client):
+    url = reverse('register-student')
+    data = {
+        'email': 'plainpwstudent@example.com',
+        'name': 'HashedPW Student',
+        'password': 'somestrongpw'
+    }
+    resp = auth_client.post(url, data)
+    user = User.objects.get(email=data['email'])
+    # Password should not be stored in plaintext
+    assert user.password != data['password']
+    assert user.check_password(data['password'])
+
+def test_google_login_endpoint_exists(client):
+    url = reverse('google_login')
+    # No credentials; expect 4xx but not 404
+    response = client.post(url)
+    assert response.status_code in [400, 401, 403]

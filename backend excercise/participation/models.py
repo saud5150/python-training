@@ -12,8 +12,15 @@ class Quiz(BaseModel):
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     score = models.DecimalField(null = True, max_digits=5, decimal_places=2)
     total_questions = models.IntegerField(null = True, blank = True)
-    total_correct = models.IntegerField(null = True, blank = True)
+    total_correct = models.IntegerField(default = 0)
     completed_at = models.DateTimeField(null = True, blank = True)
+
+    def save(self, *args, **kwargs):
+            if self.total_questions and self.total_correct is not None and self.total_questions > 0:
+                self.score = round(self.total_correct / self.total_questions, 4)
+            else:
+                self.score = None
+            super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user_id} - {self.quiz_id} ({self.score})"
@@ -32,9 +39,16 @@ class Score(BaseModel):
     subject_id = models.ForeignKey(Subject, on_delete=models.CASCADE)
     aggregate_score = models.DecimalField(max_digits=5, decimal_places=2)
 
+    def save(self, *args, **kwargs):
+                if self.total_questions and self.total_correct is not None and self.total_questions > 0:
+                    self.score = round(self.total_correct / self.total_questions, 4)
+                else:
+                    self.score = None
+                super().save(*args, **kwargs)
     def __str__(self):
         return f"{self.user_id} - {self.subject_id}: {self.aggregate_score}"
-
+    
+ 
 class Task(BaseModel):
     class TaskType(models.TextChoices):
         QUIZ = 'quiz', 'Quiz'

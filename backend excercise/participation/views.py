@@ -132,28 +132,37 @@ class AnswerAPIView(BaseView):
 
     def post(self, request):
         try:
-            serializer = AnswerSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            answer = serializer.save()
-            # After saving the answer, update the Score
-            user = answer.user_quiz_id.user_id
-            quiz = answer.user_quiz_id.quiz_id
-            subject = quiz.subject_id  # Adjust if your Quiz model uses a different field name
+            answers_data = request.data.get('answers')
+            if not answers_data:
+                return self.send_bad_response({'detail': 'No answers provided.'}, status_code=status.HTTP_400_BAD_REQUEST)
 
-            # Calculate aggregate score for this user and subject
-            user_quizzes = Quiz.objects.filter(user_id=user, quiz_id__subject_id=subject)
-            total_score = user_quizzes.aggregate(total=Sum('score'))['total'] or 0
+            results = []
+            user_quiz_id = None
+            for answer_data in answers_data:
+                serializer = AnswerSerializer(data=answer_data)
+                serializer.is_valid(raise_exception=True)
+                answer = serializer.save()
+                results.append(serializer.data)
+                user_quiz_id = answer.user_quiz_id  # Save for later score update
 
-            Score.objects.update_or_create(
-                user_id=user,
-                subject_id=subject,
-                defaults={'aggregate_score': total_score}
-            )
-            return self.send_201_response(serializer.data)
+            # After all answers, update Score for the user/quiz/subject
+            if user_quiz_id:
+                user = user_quiz_id.user_id
+                quiz = user_quiz_id.quiz_id
+                subject = quiz.subject_id
+                user_quizzes = Quiz.objects.filter(user_id=user, quiz_id__subject_id=subject)
+                total_score = user_quizzes.aggregate(total=Sum('score'))['total'] or 0
+                Score.objects.update_or_create(
+                    user_id=user,
+                    subject_id=subject,
+                    defaults={'aggregate_score': total_score}
+                )
+
+            return self.send_201_response({'answers': results})
         except ValidationError as e:
             return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.exception("Unexpected error in POST Answer:")
+            logger.exception("Unexpected error in bulk POST Answer:")
             return self.send_bad_response(
                 {"detail": "An unexpected error occurred."},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

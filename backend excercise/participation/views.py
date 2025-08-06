@@ -54,7 +54,6 @@ class QuizAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
     def put(self, request, pk):
         try:
             quiz = get_object_or_404(Quiz, pk=pk)
@@ -75,7 +74,6 @@ class QuizAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
     def patch(self, request, pk):
         try:
             quiz = get_object_or_404(Quiz, pk=pk)
@@ -95,6 +93,7 @@ class QuizAPIView(BaseView):
                 {"detail": "An unexpected error occurred."},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
     def delete(self, request, pk):
             try:
                 quiz = get_object_or_404(Quiz, pk=pk)
@@ -220,6 +219,7 @@ class AnswerAPIView(BaseView):
 class ScoreAPIView(BaseView):
     permission_classes = [IsAdminOrTeacher]
     serializer_class = ScoreSerializer
+    
     def get(self, request, pk=None):
         if pk:
             score = get_object_or_404(Score, pk=pk)
@@ -261,6 +261,7 @@ class ScoreAPIView(BaseView):
 class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer
+    
     def get(self, request, pk=None):
         try:
             if pk:

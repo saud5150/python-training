@@ -10,16 +10,16 @@ from users.models import User
 class Quiz(BaseModel):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
-    score = models.DecimalField(null = True, max_digits=5, decimal_places=2)
-    total_questions = models.IntegerField(null = True, blank = True)
+    score = models.DecimalField(default = 0, max_digits=5, decimal_places=2)
+    total_questions = models.IntegerField(default = 0)
     total_correct = models.IntegerField(default = 0)
     completed_at = models.DateTimeField(null = True, blank = True)
 
     def save(self, *args, **kwargs):
-        if self.total_questions and self.total_correct is not None and self.total_questions > 0:
+        if self.total_correct > 0 and self.total_questions > 0:
             self.score = round((self.total_correct / self.total_questions) * 100, 2)
         else:
-            self.score = None
+            self.score = 0
         super().save(*args, **kwargs)
 
     def __str__(self):

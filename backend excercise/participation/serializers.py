@@ -11,7 +11,6 @@ class QuizSerializer(serializers.ModelSerializer):
         # Automatically set the total questions and total correct based on the quiz
         quiz_instance = validated_data['quiz_id']
         validated_data['total_questions'] = quiz_instance.question_set.count()
-        # validated_data['total_correct'] = quiz_instance.total_correct
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
@@ -30,21 +29,19 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = ['id', 'user_quiz_id', 'question_id', 'answer_text', 'is_correct']
         read_only_fields = ['is_correct']  # disallow client to set this directly
 
-    def validate(self, data):
-        answer_text = data.get('answer_text')
-        question = data.get('question_id')
-
-        # Fetch the correct answer from the question model
+    def create(self, validated_data):
+        answer_text = validated_data.get('answer_text')
+        question = validated_data.get('question_id')
         correct_answer = getattr(question, 'correct_answer', None)
-
         if answer_text and correct_answer:
             is_correct = answer_text.strip().lower() == correct_answer.strip().lower()
         else:
             is_correct = False
-
-        # Inject the computed value into validated_data
-        data['is_correct'] = is_correct
-        return data
+        validated_data['is_correct'] = is_correct
+        answer = super().create(validated_data)
+        self.update_total_correct(answer.user_quiz_id)
+        self.update_participation_score(answer.user_quiz_id)
+        return answer
 
     def update_total_correct(self, user_quiz_id):
             """Helper method to update total_correct on participation"""
@@ -72,9 +69,8 @@ class AnswerSerializer(serializers.ModelSerializer):
                     # Update participation fields and save (which recalculates score)
             participation.total_correct = total_correct
             participation.total_questions = total_questions
-            participation.score = round(total_correct / total_questions, 4) if total_questions > 0 else None
+            participation.score = round(total_correct / total_questions, 4) if total_questions > 0 else 0
             participation.save()
-
 
     def create(self, validated_data):
         answer = super().create(validated_data)
@@ -88,9 +84,6 @@ class AnswerSerializer(serializers.ModelSerializer):
         self.update_total_correct(answer.user_quiz_id)
         self.update_participation_score(answer.user_quiz_id)
         return answer
-
-
-from rest_framework import serializers
 
 class ScoreSerializer(serializers.ModelSerializer):
     aggregate_score = serializers.SerializerMethodField()
@@ -121,7 +114,6 @@ class ScoreSerializer(serializers.ModelSerializer):
             return round(total_correct / total_questions * 100, 2)
         else:
             return 0.0
-
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:

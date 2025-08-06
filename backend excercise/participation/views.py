@@ -12,6 +12,7 @@ from participation.serializers import TaskSerializer, AnswerSerializer, QuizSeri
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
 from django.db.models import Sum, Count
+from quiz.models import Question
 
 # Create your views here.
 @extend_schema(tags=['Participation/ Quiz'])
@@ -139,6 +140,20 @@ class AnswerAPIView(BaseView):
             results = []
             user_quiz_id = None
             for answer_data in answers_data:
+                user_quiz_id_val = answer_data.get('user_quiz_id')
+                question_id_val = answer_data.get('question_id')
+                # Check for duplicate
+                if Answer.objects.filter(user_quiz_id=user_quiz_id_val, question_id=question_id_val).exists():
+                    # Get question text 
+                    try:
+                        question_obj = Question.objects.get(pk=question_id_val)
+                        question_text = getattr(question_obj, 'text', str(question_obj))
+                    except Exception:
+                        question_text = str(question_id_val)
+                    return self.send_bad_response(
+                        {'detail': f'Answer already exists for question: "{question_text}" in this quiz.'},
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
                 serializer = AnswerSerializer(data=answer_data)
                 serializer.is_valid(raise_exception=True)
                 answer = serializer.save()

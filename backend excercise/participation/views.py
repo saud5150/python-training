@@ -13,6 +13,7 @@ from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
 from django.db.models import Sum, Count
 from quiz.models import Question
+from django.utils import timezone
 
 # Create your views here.
 @extend_schema(tags=['Participation/ Quiz'])
@@ -172,6 +173,14 @@ class AnswerAPIView(BaseView):
                     subject_id=subject,
                     defaults={'aggregate_score': total_score}
                 )
+
+                # --- Set completed_at if all questions answered ---
+                # Get total questions for this quiz
+                total_questions = quiz.questions.count() if hasattr(quiz, 'questions') else quiz.question_set.count()
+                answered_count = Answer.objects.filter(user_quiz_id=user_quiz_id).count()
+                if answered_count == total_questions:
+                    user_quiz_id.completed_at = timezone.now()
+                    user_quiz_id.save(update_fields=['completed_at'])
 
             return self.send_201_response({'answers': results})
         except ValidationError as e:

@@ -56,6 +56,11 @@ class IsAdminOrReadUpdate(BasePermission):
         return request.user and request.user.is_authenticated and request.user.role == 'admin'
 
     def has_object_permission(self, request, view, obj):
+        # For safe methods, always allow (even if user is not authenticated)
         if request.method in SAFE_METHODS_TASK:
-            return request.user and request.user.is_authenticated
-        return request.user and request.user.is_authenticated and request.user.role == 'admin'
+            return True
+        user = getattr(request, 'user', None)
+        # For unsafe methods, only allow admin
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        return getattr(user, 'role', None) == 'admin'

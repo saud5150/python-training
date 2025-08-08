@@ -5,15 +5,21 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
 from base_view import BaseView
 from participation.models import Task, Answer, Quiz, Score
 from participation.permissions import AnswerPermission, IsAdminOrReadOnly, IsAdminOrReadUpdate
 from participation.serializers import TaskSerializer, AnswerSerializer, QuizSerializer, ScoreSerializer
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from django.db.models import Sum, Count
 from quiz.models import Question
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter, SearchFilter
+from participation.filters import ScoreFilter
 
 # Create your views here.
 @extend_schema(tags=['Participation/ Quiz'])
@@ -272,47 +278,15 @@ class AnswerAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-@extend_schema(tags=['Participation/ Score'])
-class ScoreAPIView(BaseView):
-    permission_classes = [IsAdminOrTeacher]
-    serializer_class = ScoreSerializer
-    
-    def get(self, request, pk=None):
-        if pk:
-            score = get_object_or_404(Score, pk=pk)
-            serializer = ScoreSerializer(score)
-            return self.send_successful_response(serializer.data)
-        scores = Score.objects.all()
-        serializer = ScoreSerializer(scores, many=True)
-        return self.send_successful_response(serializer.data)
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
+from participation.filters import ScoreFilter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
-    def post(self, request):
-        serializer = ScoreSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return self.send_201_response(serializer.data)
-        return self.send_bad_response(serializer.errors)
 
-    def put(self, request, pk):
-        score = get_object_or_404(Score, pk=pk)
-        serializer = ScoreSerializer(score, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return self.send_successful_response(serializer.data)
-        return self.send_bad_response(serializer.errors)
-
-    def patch(self, request, pk):
-        score = get_object_or_404(Score, pk=pk)
-        serializer = ScoreSerializer(score, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return self.send_successful_response(serializer.data)
-        return self.send_bad_response(serializer.errors)
-
-    def delete(self, request, pk):
-        score = get_object_or_404(Score, pk=pk)
-        score.delete()
-        return self.send_no_content_response()
 
 @extend_schema(tags=['Participation/ Task'])
 class TaskAPIView(BaseView):
@@ -384,3 +358,154 @@ class TaskAPIView(BaseView):
         except Exception as e:
             return self.send_exception_response(e, "An error occurred while deleting the task")
         return self.send_no_content_response()
+
+@extend_schema(
+    tags=['Participation/ Score'],
+    parameters=[
+        OpenApiParameter(
+            name='subject_id',
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.QUERY,
+            description='Filter by subject UUID',
+        ),
+        OpenApiParameter(
+            name='ordering',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Order by field. Use "-" prefix for descending order',
+            examples=[
+                OpenApiExample('Highest score first', value='-aggregate_score'),
+                OpenApiExample('Lowest score first', value='aggregate_score'),
+                OpenApiExample('Newest first', value='-created_at'),
+            ]
+        ),
+    ]
+)
+class ScoreAPIView(BaseView):
+    permission_classes = [IsAdminOrTeacher]
+    serializer_class = ScoreSerializer
+    
+    def get_queryset(self):
+        """Filter scores based on user role"""
+        user = self.request.user
+        if user.role in ['admin', 'teacher']:
+            return Score.objects.select_related('user_id', 'subject_id').all()
+        elif user.role == 'student':
+            return Score.objects.select_related('user_id', 'subject_id').filter(user_id=user)
+        return Score.objects.none()
+    
+    def apply_filters(self, queryset, request):
+        """Apply simple filters to queryset"""
+        
+        # Filter by subject
+        subject_id = request.query_params.get('subject_id')
+        if subject_id:
+            try:
+                queryset = queryset.filter(subject_id=subject_id)
+            except (ValueError, TypeError):
+                # Invalid UUID, ignore filter
+                pass
+        
+        # Apply ordering
+        ordering = request.query_params.get('ordering', '-aggregate_score')
+        valid_orderings = ['aggregate_score', '-aggregate_score', 'created_at', '-created_at', 'updated_at', '-updated_at']
+        if ordering in valid_orderings:
+            queryset = queryset.order_by(ordering)
+        
+        return queryset
+    
+    def get(self, request, pk=None):
+        try:
+            if pk:
+                score = get_object_or_404(self.get_queryset(), pk=pk)
+                serializer = ScoreSerializer(score)
+                return self.send_successful_response(serializer.data)
+            
+            # Apply filters to queryset
+            queryset = self.get_queryset()
+            filtered_queryset = self.apply_filters(queryset, request)
+            
+            serializer = ScoreSerializer(filtered_queryset, many=True)
+            return self.send_successful_response(serializer.data)
+            
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.exception("Unexpected error in GET Score:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def post(self, request):
+        try:
+            serializer = ScoreSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_201_response(serializer.data)
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in POST Score:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def put(self, request, pk):
+        try:
+            score = get_object_or_404(self.get_queryset(), pk=pk)
+            serializer = ScoreSerializer(score, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PUT Score:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def patch(self, request, pk):
+        try:
+            score = get_object_or_404(self.get_queryset(), pk=pk)
+            serializer = ScoreSerializer(score, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return self.send_successful_response(serializer.data)
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Unexpected error in PATCH Score:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def delete(self, request, pk):
+        try:
+            score = get_object_or_404(self.get_queryset(), pk=pk)
+            score.delete()
+            return self.send_no_content_response()
+        except Http404:
+            return self.send_bad_response(
+                {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.exception("Unexpected error in DELETE Score:")
+            return self.send_bad_response(
+                {"detail": "An unexpected error occurred."},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

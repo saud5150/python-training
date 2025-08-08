@@ -61,6 +61,7 @@ INSTALLED_APPS = [
 
     # Development and utilities
     "django_extensions",
+    "django_filters",  # For filtering in DRF views
 
     # Project/local apps
     "quiz",
@@ -192,7 +193,13 @@ REST_FRAMEWORK = {
         'renderer.CoreRenderer'
     ],
     'EXCEPTION_HANDLER': 'utils.custom_exception_handler',
-
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+        'rest_framework.filters.SearchFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 20,
 
 }
 

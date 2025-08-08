@@ -13,7 +13,7 @@ from .serializers import *
 from django.shortcuts import get_object_or_404, render
 from rest_framework import viewsets, permissions
 
-from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer
+from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer, StudentQuestionSerializer, StudentQuizSerializer
 from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
 from .utils import process_question_csv_upload
 from drf_spectacular.utils import extend_schema
@@ -103,12 +103,19 @@ class QuizAPIView(BaseView):
         Retrieve a list of quizzes or a specific quiz by ID.
         """
         try:
+            user = request.user
+            # Choose serializer based on user role
+            if hasattr(user, 'role') and user.role == 'student':
+                serializer_class = StudentQuizSerializer
+            else:
+                serializer_class = QuizSerializer
+                
             if pk is None:
                 quizzes = Quiz.objects.all()
-                serializer = QuizSerializer(quizzes, many=True)
+                serializer = serializer_class(quizzes, many=True)
                 return self.send_successful_response(serializer.data, description="List of quizzes retrieved successfully")
             quiz = get_object_or_404(Quiz, pk=pk)
-            serializer = QuizSerializer(quiz)
+            serializer = serializer_class(quiz)
             return self.send_successful_response(serializer.data, description="Quiz retrieved successfully")
         except Http404:
             return Response(
@@ -184,12 +191,19 @@ class QuestionView(APIView):
         return [permissions.IsAuthenticated()]
 
     def get(self, request, pk=None):
+        user = request.user
+        # Choose serializer based on user role
+        if hasattr(user, 'role') and user.role == 'student':
+            serializer_class = StudentQuestionSerializer
+        else:
+            serializer_class = QuestionSerializer
+            
         if pk is None:
             objs = Question.objects.select_related('quiz_id').all()
-            serializer = QuestionSerializer(objs, many=True)
+            serializer = serializer_class(objs, many=True)
             return Response(serializer.data)
         obj = get_object_or_404(Question, pk=pk)
-        serializer = QuestionSerializer(obj)
+        serializer = serializer_class(obj)
         return Response(serializer.data)
 
     def post(self, request, pk=None):
@@ -220,11 +234,38 @@ class QuestionView(APIView):
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-@extend_schema(tags=['Question'])
+
+@extend_schema(
+    tags=['Question'],
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                },
+                'subject_id': {
+                    'type': 'string',
+                    'description': 'Subject ID'
+                },
+                'title': {
+                    'type': 'string', 
+                    'description': 'Quiz title'
+                },
+                'description': {
+                    'type': 'string',
+                    'description': 'Quiz description'
+                }
+            },
+            'required': [ 'file', 'subject_id', 'title', 'description']
+        }
+    }
+)
 class QuestionCSVUploadView(GenericAPIView):
     permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser]
-    serializer_class = QuestionCSVUploadSerializer  # <-- Add this
+    serializer_class = QuestionCSVUploadSerializer
 
     def post(self, request, format=None):
         return process_question_csv_upload(request)

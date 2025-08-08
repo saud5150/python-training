@@ -144,15 +144,21 @@ class AnswerAPIView(BaseView):
 
     def post(self, request):
         try:
+            user_quiz_id_val = request.data.get('user_quiz_id')
             answers_data = request.data.get('answers')
+            
+            if not user_quiz_id_val:
+                return self.send_bad_response({'detail': 'user_quiz_id is required.'}, status_code=status.HTTP_400_BAD_REQUEST)
+            
             if not answers_data:
                 return self.send_bad_response({'detail': 'No answers provided.'}, status_code=status.HTTP_400_BAD_REQUEST)
 
             results = []
             user_quiz_id = None
             for answer_data in answers_data:
-                user_quiz_id_val = answer_data.get('user_quiz_id')
                 question_id_val = answer_data.get('question_id')
+                answer_text_val = answer_data.get('answer_text')
+                
                 # Check for duplicate
                 if Answer.objects.filter(user_quiz_id=user_quiz_id_val, question_id=question_id_val).exists():
                     # Get question text 
@@ -165,7 +171,15 @@ class AnswerAPIView(BaseView):
                         {'detail': f'Answer already exists for question: "{question_text}" in this quiz.'},
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
-                serializer = AnswerSerializer(data=answer_data)
+                
+                # Add user_quiz_id to each answer_data
+                complete_answer_data = {
+                    'user_quiz_id': user_quiz_id_val,
+                    'question_id': question_id_val,
+                    'answer_text': answer_text_val
+                }
+                
+                serializer = AnswerSerializer(data=complete_answer_data)
                 serializer.is_valid(raise_exception=True)
                 answer = serializer.save()
                 results.append(serializer.data)

@@ -112,13 +112,23 @@ class AnswerAPIView(BaseView):
     serializer_class = AnswerSerializer
     permission_classes = [AnswerPermission]
 
+    def get_queryset(self):
+        """Filter answers based on user role"""
+        user = self.request.user
+        if user.role in ['admin', 'teacher']:
+            return Answer.objects.all()
+        elif user.role == 'student':
+            # Students can only see their own answers
+            return Answer.objects.filter(user_quiz_id__user_id=user)
+        return Answer.objects.none()
+
     def get(self, request, pk=None):
         try:
             if pk:
-                answer = get_object_or_404(Answer, pk=pk)
+                answer = get_object_or_404(self.get_queryset(), pk=pk)
                 serializer = AnswerSerializer(answer)
                 return self.send_successful_response(serializer.data)
-            answers = Answer.objects.all()
+            answers = self.get_queryset()
             serializer = AnswerSerializer(answers, many=True)
             return self.send_successful_response(serializer.data)
         except Http404:

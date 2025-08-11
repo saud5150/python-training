@@ -379,6 +379,17 @@ class TaskAPIView(BaseView):
                 OpenApiExample('Newest first', value='-created_at'),
             ]
         ),
+       OpenApiParameter(
+            name='min_aggregate_score',  # Change this to match standard naming
+            type=OpenApiTypes.NUMBER,
+            location=OpenApiParameter.QUERY,
+            description='Filter scores with aggregate score >= this value',
+            examples=[
+                OpenApiExample('Above 50', value=50),
+                OpenApiExample('Above 70', value=70),
+                OpenApiExample('Above 80', value=80),
+            ]
+        ),
     ]
 )
 class ScoreAPIView(BaseView):
@@ -405,13 +416,23 @@ class ScoreAPIView(BaseView):
             except (ValueError, TypeError):
                 # Invalid UUID, ignore filter
                 pass
-        
+        # Filter by minimum score
+        min_score = request.query_params.get('min_aggregate_score')
+        if min_score:
+            try:
+                min_score_value = float(min_score)
+                queryset = queryset.filter(aggregate_score__gte=min_score_value)
+            except (ValueError, TypeError):
+                # Invalid score, ignore filter
+                pass
+            
         # Apply ordering
         ordering = request.query_params.get('ordering', '-aggregate_score')
         valid_orderings = ['aggregate_score', '-aggregate_score', 'created_at', '-created_at', 'updated_at', '-updated_at']
         if ordering in valid_orderings:
             queryset = queryset.order_by(ordering)
         
+
         return queryset
     
     def get(self, request, pk=None):

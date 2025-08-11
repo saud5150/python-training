@@ -347,6 +347,7 @@ class TaskAPIView(BaseView):
 @extend_schema(
     tags=['Participation/ Score'],
     parameters=[
+        *BaseView.get_pagination_openapi_parameters(),  # Add pagination params
         OpenApiParameter(
             name='subject_id',
             type=OpenApiTypes.UUID,
@@ -445,16 +446,23 @@ class ScoreAPIView(BaseView):
     def get(self, request, pk=None):
         try:
             if pk:
+                # Single object - no pagination needed
                 score = get_object_or_404(self.get_queryset(), pk=pk)
                 serializer = ScoreSerializer(score)
-                return self.send_successful_response(serializer.data)
+                return self.send_successful_response(serializer.data, "Score retrieved successfully")
             
-            # Apply filters to queryset
+            # List view - apply filters and pagination
             queryset = self.get_queryset()
             filtered_queryset = self.apply_filters(queryset, request)
             
-            serializer = ScoreSerializer(filtered_queryset, many=True)
-            return self.send_successful_response(serializer.data)
+            # Use BaseView pagination - ONE LINE CHANGE!
+            return self.send_successful_response(
+                payload=None,  # Will be set automatically
+                description="Scores retrieved successfully",
+                queryset=filtered_queryset,
+                serializer_class=ScoreSerializer,
+                paginate=True  # Enable pagination
+            )
             
         except Http404:
             return self.send_bad_response(

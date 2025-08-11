@@ -2,14 +2,68 @@ import logging
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
+class StandardPagination(PageNumberPagination):
+    """
+    Standard pagination class following DRF best practices
+    """
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+    
+    def get_paginated_response(self, data):
+        """
+        Custom response format to match BaseView style
+        """
+        return Response({
+             'description': 'Data retrieved successfully',
+            'payload': {
+                'results': data,
+                'pagination': {
+                    'count': self.page.paginator.count,
+                    'page': self.page.number,
+                    'page_size': self.get_page_size(self.request),
+                    'total_pages': self.page.paginator.num_pages,
+                    'has_next': self.page.has_next(),
+                    'has_previous': self.page.has_previous(),
+                    'next': self.get_next_link(),
+                    'previous': self.get_previous_link(),
+                }
+            }
+        })
 
 class BaseView(APIView):
     """
     Base view class for participation app with common response methods.
     """
+    pagination_class = StandardPagination
+
+    @property
+    def paginator(self):
+        """
+        The paginator instance associated with the view, or `None`.
+        """
+        if not hasattr(self, '_paginator'):
+            if self.pagination_class is None:
+                self._paginator = None
+            else:
+                self._paginator = self.pagination_class()
+        return self._paginator
     
-    def send_successful_response(self, payload, description="", status_code=status.HTTP_200_OK):
+    def paginate_queryset(self, queryset):
+            """
+            Return a single page of results, or `None` if pagination is disabled.
+            """
+            if self.paginator is None:
+                return None, None
+            
+            page = self.paginator.paginate_queryset(queryset, self.request, view=self)
+            if page is not None:
+                return page, self.paginator
+            return None, None
+
+    def send_successful_response(self, payload, description="", status_code=status.HTTP_200_OK, queryset=None, serializer_class=None, paginate=False, **serializer_kwargs):
         """
         Send a successful response with data and optional description.
         
@@ -21,6 +75,23 @@ class BaseView(APIView):
         Returns:
             Response object with data and status code
         """
+# If queryset is provided, handle serialization and optional pagination
+        if queryset is not None:
+            if serializer_class is None:
+                raise ValueError("serializer_class is required when queryset is provided")
+            
+            if paginate and self.pagination_class is not None:
+                # Apply pagination
+                page, paginator = self.paginate_queryset(queryset)
+                
+                if page is not None:
+                    # Paginated response
+                    serializer = serializer_class(page, many=True, **serializer_kwargs)
+                    return paginator.get_paginated_response(serializer.data)
+        # No pagination - serialize all data
+        serializer = serializer_class(queryset, many=True, **serializer_kwargs)
+        payload = serializer.data
+        
         return Response({"description": description, "payload": payload}, status=status_code)
     
     def send_201_response(self, payload, description=""):
@@ -85,3 +156,40 @@ class BaseView(APIView):
             },
             status=status_code,
         )
+    
+    @staticmethod
+    def get_pagination_openapi_parameters():
+        """
+        Return standard pagination parameters for OpenAPI documentation.
+        
+        Returns:
+            list: List of OpenApiParameter objects for pagination
+        """
+        from drf_spectacular.utils import OpenApiParameter
+        from drf_spectacular.types import OpenApiTypes
+        
+        return [
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number (starts from 1)',
+                required=False,
+                examples=[
+                    {'summary': 'First page', 'value': 1},
+                    {'summary': 'Second page', 'value': 2},
+                ]
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of results per page (default: 20, max: 100)',
+                required=False,
+                examples=[
+                    {'summary': 'Default page size', 'value': 20},
+                    {'summary': 'Larger page size', 'value': 50},
+                    {'summary': 'Maximum page size', 'value': 100},
+                ]
+            ),
+        ]

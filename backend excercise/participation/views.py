@@ -375,6 +375,17 @@ class TaskAPIView(BaseView):
                 OpenApiExample('Above 80', value=80),
             ]
         ),
+        OpenApiParameter(
+            name='max_aggregate_score',  # Change this to match standard naming
+            type=OpenApiTypes.NUMBER,
+            location=OpenApiParameter.QUERY,
+            description='Filter scores with aggregate score <= this value',
+            examples=[
+                OpenApiExample('Below 50', value=50),
+                OpenApiExample('Below 70', value=70),
+                OpenApiExample('Below 80', value=80),
+            ]
+        ),
     ]
 )
 class ScoreAPIView(BaseView):
@@ -401,12 +412,23 @@ class ScoreAPIView(BaseView):
             except (ValueError, TypeError):
                 # Invalid UUID, ignore filter
                 pass
+            
         # Filter by minimum score
         min_score = request.query_params.get('min_aggregate_score')
         if min_score:
             try:
                 min_score_value = float(min_score)
                 queryset = queryset.filter(aggregate_score__gte=min_score_value)
+            except (ValueError, TypeError):
+                # Invalid score, ignore filter
+                pass
+
+        # Filter by maximum score
+        max_score = request.query_params.get('max_aggregate_score')
+        if max_score:
+            try:
+                max_score_value = float(max_score)
+                queryset = queryset.filter(aggregate_score__lte=max_score_value)
             except (ValueError, TypeError):
                 # Invalid score, ignore filter
                 pass

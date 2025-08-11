@@ -3,10 +3,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework import permissions, status
-from rest_framework.views import APIView
-from rest_framework.generics import GenericAPIView
-from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
+from rest_framework import status
 from base_view import BaseView
 from participation.models import Task, Answer, Quiz, Score
 from participation.permissions import AnswerPermission, IsAdminOrReadOnly, IsAdminOrReadUpdate
@@ -17,10 +14,8 @@ from drf_spectacular.types import OpenApiTypes
 from django.db.models import Sum, Count
 from quiz.models import Question
 from django.utils import timezone
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter, SearchFilter
-from participation.filters import ScoreFilter
-
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 # Create your views here.
 @extend_schema(tags=['Participation/ Quiz'])
 class QuizAPIView(BaseView):
@@ -278,16 +273,6 @@ class AnswerAPIView(BaseView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.generics import GenericAPIView
-from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
-from participation.filters import ScoreFilter
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
-
-
-
 @extend_schema(tags=['Participation/ Task'])
 class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
@@ -425,7 +410,7 @@ class ScoreAPIView(BaseView):
             except (ValueError, TypeError):
                 # Invalid score, ignore filter
                 pass
-            
+
         # Apply ordering
         ordering = request.query_params.get('ordering', '-aggregate_score')
         valid_orderings = ['aggregate_score', '-aggregate_score', 'created_at', '-created_at', 'updated_at', '-updated_at']

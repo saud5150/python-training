@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-
+from django.db.models import Avg
 from base_model import BaseModel
 from quiz.models import Question, Quiz, Subject
 from users.models import User
@@ -41,7 +41,6 @@ class Score(BaseModel):
 
     def save(self, *args, **kwargs):
         # Calculate AVERAGE score, not SUM
-        from django.db.models import Sum, Avg
         quizzes = Quiz.objects.filter(
             user_id=self.user_id, 
             quiz_id__subject_id=self.subject_id

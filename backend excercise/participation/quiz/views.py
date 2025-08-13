@@ -26,11 +26,11 @@ class QuizAPIView(BaseView):
         try:
             if pk:
                 quiz = get_object_or_404(Quiz, pk=pk)
-                serializer = QuizSerializer(quiz)
-                return self.send_successful_response(serializer.data)
+                # Pass the model instance, not serializer.data
+                return self.send_successful_response(quiz, serializer_class=QuizSerializer)
             quizzes = Quiz.objects.all()
-            serializer = QuizSerializer(quizzes, many=True)
-            return self.send_successful_response(serializer.data)
+            # Pass the queryset, not serializer.data
+            return self.send_successful_response(quizzes, serializer_class=QuizSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -46,8 +46,8 @@ class QuizAPIView(BaseView):
         try:
             serializer = QuizSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_201_response(serializer.data)
+            quiz = serializer.save()  # Get the saved instance
+            return self.send_201_response(serializer.data)  # This is fine for 201 response
         except ValidationError as e:
             return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -62,8 +62,9 @@ class QuizAPIView(BaseView):
             quiz = get_object_or_404(Quiz, pk=pk)
             serializer = QuizSerializer(quiz, data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_quiz = serializer.save()  # Get the updated instance
+            # Pass the model instance, not serializer.data
+            return self.send_successful_response(updated_quiz, serializer_class=QuizSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -82,8 +83,9 @@ class QuizAPIView(BaseView):
             quiz = get_object_or_404(Quiz, pk=pk)
             serializer = QuizSerializer(quiz, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_quiz = serializer.save()  # Get the updated instance
+            # Pass the model instance, not serializer.data
+            return self.send_successful_response(updated_quiz, serializer_class=QuizSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -98,13 +100,13 @@ class QuizAPIView(BaseView):
             )
         
     def delete(self, request, pk):
-            try:
-                quiz = get_object_or_404(Quiz, pk=pk)
-                quiz.delete()
-                return self.send_no_content_response()
-            except Http404:
-                return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
-            except Exception as e:
-                logger.exception("Unexpected error on DELETE Quiz:")
-                return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            quiz = get_object_or_404(Quiz, pk=pk)
+            quiz.delete()
+            return self.send_no_content_response()
+        except Http404:
+            return self.send_bad_response({"detail": "Quiz not found."}, status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.exception("Unexpected error on DELETE Quiz:")
+            return self.send_bad_response({"detail": "An unexpected error occurred."}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

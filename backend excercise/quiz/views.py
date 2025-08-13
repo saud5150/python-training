@@ -112,11 +112,9 @@ class QuizAPIView(BaseView):
                 
             if pk is None:
                 quizzes = Quiz.objects.all()
-                serializer = serializer_class(quizzes, many=True)
-                return self.send_successful_response(serializer.data, description="List of quizzes retrieved successfully")
+                return self.send_successful_response(quizzes, description="List of quizzes retrieved successfully", serializer_class=serializer_class)
             quiz = get_object_or_404(Quiz, pk=pk)
-            serializer = serializer_class(quiz)
-            return self.send_successful_response(serializer.data, description="Quiz retrieved successfully")
+            return self.send_successful_response(quiz, description="Quiz retrieved successfully", serializer_class=serializer_class)
         except Http404:
             return Response(
                 {'detail': 'Quiz not found.'},

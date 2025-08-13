@@ -38,11 +38,11 @@ class AnswerAPIView(BaseView):
         try:
             if pk:
                 answer = get_object_or_404(self.get_queryset(), pk=pk)
-                serializer = AnswerSerializer(answer)
-                return self.send_successful_response(serializer.data)
+                # Pass the model instance, not serializer.data
+                return self.send_successful_response(answer, serializer_class=AnswerSerializer)
             answers = self.get_queryset()
-            serializer = AnswerSerializer(answers, many=True)
-            return self.send_successful_response(serializer.data)
+            # Pass the queryset, not serializer.data
+            return self.send_successful_response(answers, serializer_class=AnswerSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -133,8 +133,9 @@ class AnswerAPIView(BaseView):
             answer = get_object_or_404(Answer, pk=pk)
             serializer = AnswerSerializer(answer, data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_answer = serializer.save()  # Get the updated instance
+            # Pass the model instance, not serializer.data
+            return self.send_successful_response(updated_answer, serializer_class=AnswerSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -153,8 +154,9 @@ class AnswerAPIView(BaseView):
             answer = get_object_or_404(Answer, pk=pk)
             serializer = AnswerSerializer(answer, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_answer = serializer.save()  # Get the updated instance
+            # Pass the model instance, not serializer.data
+            return self.send_successful_response(updated_answer, serializer_class=AnswerSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Answer not found."}, status_code=status.HTTP_404_NOT_FOUND

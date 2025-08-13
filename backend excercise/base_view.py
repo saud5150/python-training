@@ -165,7 +165,7 @@ class BaseView(APIView):
         Returns:
             list: List of OpenApiParameter objects for pagination
         """
-        from drf_spectacular.utils import OpenApiParameter
+        from drf_spectacular.utils import OpenApiParameter, OpenApiExample
         from drf_spectacular.types import OpenApiTypes
         
         return [
@@ -176,8 +176,8 @@ class BaseView(APIView):
                 description='Page number (starts from 1)',
                 required=False,
                 examples=[
-                    {'summary': 'First page', 'value': 1},
-                    {'summary': 'Second page', 'value': 2},
+                    OpenApiExample(name='first_page', summary='First page', value=1),
+                    OpenApiExample(name='second_page', summary='Second page', value=2),
                 ]
             ),
             OpenApiParameter(
@@ -187,9 +187,9 @@ class BaseView(APIView):
                 description='Number of results per page (default: 20, max: 100)',
                 required=False,
                 examples=[
-                    {'summary': 'Default page size', 'value': 20},
-                    {'summary': 'Larger page size', 'value': 50},
-                    {'summary': 'Maximum page size', 'value': 100},
+                    OpenApiExample(name='default_page_size', summary='Default page size', value=20),
+                    OpenApiExample(name='larger_page_size', summary='Larger page size', value=50),
+                    OpenApiExample(name='maximum_page_size', summary='Maximum page size', value=100),
                 ]
             ),
         ]

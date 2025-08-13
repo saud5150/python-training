@@ -1,5 +1,9 @@
 from django.urls import path
-from participation.views import QuizAPIView, AnswerAPIView, ScoreAPIView, TaskAPIView
+from participation.answer.views import AnswerAPIView
+from participation.score.views import ScoreAPIView
+from participation.task.views import TaskAPIView
+from participation.quiz.views import QuizAPIView
+
 
 urlpatterns = [
     # Quiz endpoints

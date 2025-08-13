@@ -1,26 +1,7 @@
 from django.apps import apps
 from rest_framework import serializers
-from participation.models import *
-class QuizSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Quiz
-        fields = '__all__'
+from participation.answer.models import *
 
-    def create(self, validated_data):
-        # Automatically set the total questions and total correct based on the quiz
-        quiz_instance = validated_data['quiz_id']
-        validated_data['total_questions'] = quiz_instance.question_set.count()
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-
-        if 'quiz_id' in validated_data:
-            quiz_instance = validated_data['quiz_id']
-        else:
-            quiz_instance = instance.quiz_id
-        
-        validated_data['total_questions'] = quiz_instance.question_set.count()
-        return super().update(instance, validated_data)
 
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -77,15 +58,3 @@ class AnswerSerializer(serializers.ModelSerializer):
         self.update_total_correct(answer.user_quiz_id)
         self.update_participation_score(answer.user_quiz_id)
         return answer
-
-class ScoreSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Score
-        fields = '__all__'
-        lookup_field = 'id'
-
-class TaskSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Task
-        fields = '__all__' 
-        lookup_field = 'id'

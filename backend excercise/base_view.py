@@ -38,6 +38,7 @@ class BaseView(APIView):
     Base view class for participation app with common response methods.
     """
     pagination_class = StandardPagination
+    serializer_class = None
 
     @property
     def paginator(self):
@@ -63,99 +64,110 @@ class BaseView(APIView):
                 return page, self.paginator
             return None, None
 
-    def send_successful_response(self, payload, description="", status_code=status.HTTP_200_OK, queryset=None, serializer_class=None, paginate=False, **serializer_kwargs):
+    def send_successful_response(self, data=None, description="Success", serializer_class=None, many=None, payload=None, paginate=False, **serializer_kwargs):
         """
-        Send a successful response with data and optional description.
+        Send a successful response with serialized data
         
         Args:
-            payload: The data to send in the response
-            description: Optional description message
-            status_code: HTTP status code (default: 200)
-        
-        Returns:
-            Response object with data and status code
+            data: The data to serialize (queryset, model instance, or already serialized data)
+            description: Success message
+            serializer_class: Serializer class to use (overrides self.serializer_class)
+            many: Whether to serialize multiple objects
+            payload: Alternative to data parameter
+            paginate: Whether to apply pagination
+            **serializer_kwargs: Additional kwargs for serializer
         """
-# If queryset is provided, handle serialization and optional pagination
-        if queryset is not None:
-            if serializer_class is None:
-                raise ValueError("serializer_class is required when queryset is provided")
+        try:
+            # Use payload if data is None (for backward compatibility)
+            actual_data = data if data is not None else payload
             
-            if paginate and self.pagination_class is not None:
-                # Apply pagination
-                page, paginator = self.paginate_queryset(queryset)
-                
+            if actual_data is None:
+                return Response({
+                    "success": True,
+                    "message": description,
+                    "data": []
+                }, status=status.HTTP_200_OK)
+            
+            # Use provided serializer_class or fall back to class attribute
+            serializer_cls = serializer_class or self.serializer_class
+            
+            # Handle pagination if requested
+            if paginate and hasattr(actual_data, 'model'):  # Check if it's a QuerySet
+                page, paginator = self.paginate_queryset(actual_data)
                 if page is not None:
-                    # Paginated response
-                    serializer = serializer_class(page, many=True, **serializer_kwargs)
-                    return paginator.get_paginated_response(serializer.data)
-        # No pagination - serialize all data
-        serializer = serializer_class(queryset, many=True, **serializer_kwargs)
-        payload = serializer.data
-        
-        return Response({"description": description, "payload": payload}, status=status_code)
+                    if serializer_cls:
+                        serializer = serializer_cls(page, many=True, **serializer_kwargs)
+                        return paginator.get_paginated_response(serializer.data)
+                    else:
+                        return paginator.get_paginated_response(list(page))
+            
+            if serializer_cls is None:
+                # If no serializer class is available, return data as-is
+                return Response({
+                    "success": True,
+                    "message": description,
+                    "data": actual_data
+                }, status=status.HTTP_200_OK)
+            
+            # Determine if we need many=True based on data type
+            if many is None:
+                # Check if data is a QuerySet or list
+                from django.db.models.query import QuerySet
+                many = isinstance(actual_data, (QuerySet, list))
+            
+            # Serialize the data
+            serializer = serializer_cls(actual_data, many=many, **serializer_kwargs)
+            
+            return Response({
+                "success": True,
+                "message": description,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return self.send_exception_response(e, "Error in send_successful_response")
     
-    def send_201_response(self, payload, description=""):
+    def send_201_response(self, data, description="Created successfully"):
         """
-        Send a 201 Created response with data and optional description.
-        
-        Args:
-            payload: The data to send in the response
-            description: Optional description message
-        
-        Returns:
-            Response object with data and 201 status code
+        Send a 201 Created response
         """
-        return Response({"description": description, "payload": payload}, status=status.HTTP_201_CREATED)
+        return Response({
+            "success": True,
+            "message": description,
+            "data": data
+        }, status=status.HTTP_201_CREATED)
     
-    def send_bad_response(self, errors, description="", status_code=status.HTTP_400_BAD_REQUEST):
+    def send_bad_response(self, errors, description="Bad request", status_code=status.HTTP_400_BAD_REQUEST):
         """
-        Send a bad request response with errors and optional description.
-        
-        Args:
-            errors: The error data to send in the response
-            description: Optional description message
-            status_code: HTTP status code (default: 400)
-        
-        Returns:
-            Response object with errors and status code
+        Send a bad request response
         """
-        return Response({"description": description, "errors": errors}, status=status_code)
+        return Response({
+            "success": False,
+            "message": description,
+            "errors": errors
+        }, status=status_code)
     
-    def send_no_content_response(self):
+    def send_no_content_response(self, description="Deleted successfully"):
         """
-        Send a 204 No Content response.
-        
-        Returns:
-            Response object with 204 status code
+        Send a 204 No Content response
         """
-        return Response(status=status.HTTP_204_NO_CONTENT) 
+        return Response({
+            "success": True,
+            "message": description
+        }, status=status.HTTP_204_NO_CONTENT)
     
-    def send_exception_response(self, exc, description="An error occurred", status_code=None):
+    def send_exception_response(self, exception, description="An error occurred"):
         """
-        Standardized error response for exceptions.
-
-        Args:
-            exc (Exception): The caught exception instance.
-            description (str): Optional human-readable description.
-            status_code (int): HTTP status code. Default to 500 if not provided.
-
-        Returns:
-            DRF Response with formatted error.
+        Send an exception response
         """
-        # log the exception here for debugging
-        logging.error(f"Exception: {exc}", exc_info=True)
-
-        if status_code is None:
-            # Default to 500 internal server error if no specific status provided
-            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-        return Response(
-            {
-                "description": description,
-                "errors": str(exc),
-            },
-            status=status_code,
-        )
+        import logging
+        logging.error(f"Exception: {str(exception)}")
+        
+        return Response({
+            "success": False,
+            "message": description,
+            "error": str(exception)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @staticmethod
     def get_pagination_openapi_parameters():
@@ -165,7 +177,7 @@ class BaseView(APIView):
         Returns:
             list: List of OpenApiParameter objects for pagination
         """
-        from drf_spectacular.utils import OpenApiParameter
+        from drf_spectacular.utils import OpenApiParameter, OpenApiExample
         from drf_spectacular.types import OpenApiTypes
         
         return [
@@ -176,8 +188,8 @@ class BaseView(APIView):
                 description='Page number (starts from 1)',
                 required=False,
                 examples=[
-                    {'summary': 'First page', 'value': 1},
-                    {'summary': 'Second page', 'value': 2},
+                    OpenApiExample(name='first_page', summary='First page', value=1),
+                    OpenApiExample(name='second_page', summary='Second page', value=2),
                 ]
             ),
             OpenApiParameter(
@@ -187,9 +199,9 @@ class BaseView(APIView):
                 description='Number of results per page (default: 20, max: 100)',
                 required=False,
                 examples=[
-                    {'summary': 'Default page size', 'value': 20},
-                    {'summary': 'Larger page size', 'value': 50},
-                    {'summary': 'Maximum page size', 'value': 100},
+                    OpenApiExample(name='default_page_size', summary='Default page size', value=20),
+                    OpenApiExample(name='larger_page_size', summary='Larger page size', value=50),
+                    OpenApiExample(name='maximum_page_size', summary='Maximum page size', value=100),
                 ]
             ),
         ]

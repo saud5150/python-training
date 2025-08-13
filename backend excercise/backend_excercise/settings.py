@@ -9,11 +9,14 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from datetime import timedelta
 from pathlib import Path
-import os
 from dotenv import load_dotenv
+
+# =============================================================================
+# PATH CONFIGURATION
+# =============================================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -22,8 +25,9 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# =============================================================================
+# SECURITY SETTINGS
+# =============================================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -33,8 +37,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
+# =============================================================================
+# APPLICATION DEFINITION
+# =============================================================================
 
 INSTALLED_APPS = [
     # Django core apps
@@ -61,22 +66,22 @@ INSTALLED_APPS = [
 
     # Development and utilities
     "django_extensions",
+    "django_filters",  # For filtering in DRF views
 
     # Project/local apps
-    "quiz",
     "users",
+    "quiz",
     "participation",
 ]
-
-
-SITE_ID = 1  # Required by django-allauth
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 )
 
-REST_USE_JWT = True
+# =============================================================================
+# DJANGO ALLAUTH CONFIGURATION
+# =============================================================================
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -94,6 +99,13 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
+
+# =============================================================================
+# MIDDLEWARE CONFIGURATION
+# =============================================================================
+
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -107,6 +119,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend_excercise.urls"
+
+# =============================================================================
+# TEMPLATES CONFIGURATION
+# =============================================================================
+
 
 TEMPLATES = [
     {
@@ -126,8 +143,9 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend_excercise.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
 
 DATABASES = {
     "default": {
@@ -141,8 +159,11 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+# =============================================================================
+# AUTHENTICATION CONFIGURATION
+# =============================================================================
+
+AUTH_USER_MODEL = 'users.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -159,9 +180,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SITE_ID = 1  # Required by django-allauth
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+# =============================================================================
+# INTERNATIONALIZATION
+# =============================================================================
 
 LANGUAGE_CODE = "en-us"
 
@@ -182,25 +205,55 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# =============================================================================
+# DJANGO REST FRAMEWORK CONFIGURATION
+# =============================================================================
+
 REST_FRAMEWORK = {
 
+    # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    # Schema generation
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    
+    # Rendering
     'DEFAULT_RENDERER_CLASSES': [
         'renderer.CoreRenderer'
     ],
-    'EXCEPTION_HANDLER': 'utils.custom_exception_handler',
 
+    # Error handling
+    'EXCEPTION_HANDLER': 'utils.custom_exception_handler',
+    
+    # Filtering
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+        'rest_framework.filters.SearchFilter',
+    ],
+
+    # Pagination
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 20,
 
 }
+
+# =============================================================================
+# JWT CONFIGURATION
+# =============================================================================
+
 
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',  # Use your actual PK field name
         'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=90),
 }
+
+# =============================================================================
+# DRF SPECTACULAR (API DOCUMENTATION) CONFIGURATION
+# =============================================================================
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Quiz Project API',
@@ -209,10 +262,6 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-
-
-AUTH_USER_MODEL = 'users.User'
-
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_SIGNUP_FIELDS = [
     'email*',        # required field
@@ -220,6 +269,10 @@ ACCOUNT_SIGNUP_FIELDS = [
     'password2*',    # required field (password repeat)
     # 'username',    # optional; omit or add without * if not using
 ]
+
+# =============================================================================
+# EMAIL CONFIGURATION
+# =============================================================================
 
 ACCOUNT_LOGIN_METHODS = {"email"}
 
@@ -231,6 +284,11 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')       # App-specific password 
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')  # Default sender email
 
+# =============================================================================
+# DJ-REST-AUTH CONFIGURATION
+# =============================================================================
+
+REST_USE_JWT = True
 
 REST_AUTH = {
     'TOKEN_MODEL': None, # Set this if you are not using DRF's default token model
@@ -238,11 +296,8 @@ REST_AUTH = {
     'USE_JWT': True,
 }
 
-
 REST_AUTH_SERIALIZERS = {
     'TOKEN_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
 }
-
-SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'

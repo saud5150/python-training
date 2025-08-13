@@ -1,7 +1,6 @@
 from django.apps import apps
 from rest_framework import serializers
 from participation.models import *
-from django.db.models import Sum
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
@@ -65,7 +64,6 @@ class AnswerSerializer(serializers.ModelSerializer):
     def update_participation_score(self, participation):
             # Calculate total_correct and total_questions
             Answer = apps.get_model('participation', 'Answer')  # Adjust app/model names
-
             total_correct = Answer.objects.filter(user_quiz_id=participation, is_correct=True).count()
             total_questions = Answer.objects.filter(user_quiz_id=participation).count()
                     # Update participation fields and save (which recalculates score)
@@ -74,7 +72,6 @@ class AnswerSerializer(serializers.ModelSerializer):
             participation.score = round(total_correct / total_questions, 4) if total_questions > 0 else 0
             participation.save()
 
-
     def update(self, instance, validated_data):
         answer = super().update(instance, validated_data)
         self.update_total_correct(answer.user_quiz_id)
@@ -82,34 +79,10 @@ class AnswerSerializer(serializers.ModelSerializer):
         return answer
 
 class ScoreSerializer(serializers.ModelSerializer):
-    aggregate_score = serializers.SerializerMethodField()
-
     class Meta:
         model = Score
         fields = '__all__'
         lookup_field = 'id'
-
-    def get_aggregate_score(self, obj):
-        # Dynamically calculate aggregate score here or call model method if exists
-        user = obj.user_id
-        subject = obj.subject_id
-
-
-        aggregates = Quiz.objects.filter(
-            user_id=user,
-            quiz_id__subject_id=subject
-        ).aggregate(
-            total_correct=Sum('total_correct'),
-            total_questions=Sum('total_questions')
-        )
-
-        total_correct = aggregates.get('total_correct') or 0
-        total_questions = aggregates.get('total_questions') or 0
-
-        if total_questions > 0:
-            return round(total_correct / total_questions * 100, 2)
-        else:
-            return 0.0
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:

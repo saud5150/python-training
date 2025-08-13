@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-
+from django.db.models import Avg
 from base_model import BaseModel
 from quiz.models import Question, Quiz, Subject
 from users.models import User
@@ -40,15 +40,38 @@ class Score(BaseModel):
     aggregate_score = models.DecimalField(max_digits=5, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        # Example: aggregate all quiz scores for this user and subject
-        from django.db.models import Sum
-        quizzes = Quiz.objects.filter(user_id=self.user_id, quiz_id__subject_id=self.subject_id)
-        total_score = quizzes.aggregate(total=Sum('score'))['total'] or 0
-        self.aggregate_score = total_score
+        # Calculate AVERAGE score, not SUM
+        quizzes = Quiz.objects.filter(
+            user_id=self.user_id, 
+            quiz_id__subject_id=self.subject_id
+        )
+        
+        if quizzes.exists():
+            avg_score = quizzes.aggregate(avg=Avg('score'))['avg'] or 0
+            self.aggregate_score = round(avg_score, 2)
+            #self.aggregate_score = quizzes.aggregate(total=Avg('score'))['total'] or 0
+        else:
+            self.aggregate_score = 0
+            
         super().save(*args, **kwargs)
-    def __str__(self):
-        return f"{self.user_id} - {self.subject_id}: {self.aggregate_score}"
-    
+
+    def update_aggregate_score(self):
+        """Call this method when quiz scores change"""
+        # Don't trigger save() recursion - use update_fields
+        from django.db.models import Avg
+        quizzes = Quiz.objects.filter(
+            user_id=self.user_id, 
+            quiz_id__subject_id=self.subject_id
+        )
+        
+        if quizzes.exists():
+            avg_score = quizzes.aggregate(avg=Avg('score'))['avg'] or 0
+            self.aggregate_score = round(avg_score, 2)
+        else:
+            self.aggregate_score = 0
+            
+        # Use update_fields to avoid triggering save() again
+        super().save(update_fields=['aggregate_score'])
  
 class Task(BaseModel):
     class TaskType(models.TextChoices):

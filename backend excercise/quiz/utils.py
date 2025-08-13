@@ -6,13 +6,13 @@ from quiz.models import Subject, Quiz, Question
 from datetime import datetime
 
 def process_question_csv_upload(request):
-    required_fields = ['id', 'title', 'description']
+    required_fields = ['subject_id', 'title', 'description']
     data = request.data
     missing_fields = [field for field in required_fields if not data.get(field)]
     if missing_fields:
         return Response({'missing_fields': missing_fields}, status=status.HTTP_400_BAD_REQUEST)
 
-    subject_id = data.get('id')
+    subject_id = data.get('subject_id')
     quiz_title = data.get('title')
     description = data.get('description')
     try:

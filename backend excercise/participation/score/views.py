@@ -125,18 +125,19 @@ class ScoreAPIView(BaseView):
             if pk:
                 # Single object - no pagination needed
                 score = get_object_or_404(self.get_queryset(), pk=pk)
-                serializer = ScoreSerializer(score)
-                return self.send_successful_response(serializer.data, "Score retrieved successfully")
+                return self.send_successful_response(score, "Score retrieved successfully", serializer_class=ScoreSerializer)
             
             # List view - apply filters and pagination
             queryset = self.get_queryset()
             filtered_queryset = self.apply_filters(queryset, request)
             
-            # Use BaseView pagination - ONE LINE CHANGE!
+            # Debug: Check if there are any scores
+            print(f"Total scores in queryset: {filtered_queryset.count()}")
+            
+            # Use BaseView pagination with the correct parameter name
             return self.send_successful_response(
-                payload=None,  # Will be set automatically
+                data=filtered_queryset,  # Pass the queryset as data
                 description="Scores retrieved successfully",
-                queryset=filtered_queryset,
                 serializer_class=ScoreSerializer,
                 paginate=True  # Enable pagination
             )
@@ -172,8 +173,8 @@ class ScoreAPIView(BaseView):
             score = get_object_or_404(self.get_queryset(), pk=pk)
             serializer = ScoreSerializer(score, data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_score = serializer.save()
+            return self.send_successful_response(updated_score, serializer_class=ScoreSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND
@@ -192,8 +193,8 @@ class ScoreAPIView(BaseView):
             score = get_object_or_404(self.get_queryset(), pk=pk)
             serializer = ScoreSerializer(score, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return self.send_successful_response(serializer.data)
+            updated_score = serializer.save()
+            return self.send_successful_response(updated_score, serializer_class=ScoreSerializer)
         except Http404:
             return self.send_bad_response(
                 {"detail": "Score not found."}, status_code=status.HTTP_404_NOT_FOUND

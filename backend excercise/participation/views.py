@@ -12,6 +12,8 @@ from participation.serializers import TaskSerializer, AnswerSerializer, QuizSeri
 from users.permissions import IsAdmin, IsAdminOrTeacher, IsTeacher
 from drf_spectacular.utils import extend_schema
 from django.db.models import Sum, Count
+from quiz.models import Question
+from django.utils import timezone
 
 # Create your views here.
 @extend_schema(tags=['Participation/ Quiz'])
@@ -132,28 +134,59 @@ class AnswerAPIView(BaseView):
 
     def post(self, request):
         try:
-            serializer = AnswerSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            answer = serializer.save()
-            # After saving the answer, update the Score
-            user = answer.user_quiz_id.user_id
-            quiz = answer.user_quiz_id.quiz_id
-            subject = quiz.subject_id  # Adjust if your Quiz model uses a different field name
+            answers_data = request.data.get('answers')
+            if not answers_data:
+                return self.send_bad_response({'detail': 'No answers provided.'}, status_code=status.HTTP_400_BAD_REQUEST)
 
-            # Calculate aggregate score for this user and subject
-            user_quizzes = Quiz.objects.filter(user_id=user, quiz_id__subject_id=subject)
-            total_score = user_quizzes.aggregate(total=Sum('score'))['total'] or 0
+            results = []
+            user_quiz_id = None
+            for answer_data in answers_data:
+                user_quiz_id_val = answer_data.get('user_quiz_id')
+                question_id_val = answer_data.get('question_id')
+                # Check for duplicate
+                if Answer.objects.filter(user_quiz_id=user_quiz_id_val, question_id=question_id_val).exists():
+                    # Get question text 
+                    try:
+                        question_obj = Question.objects.get(pk=question_id_val)
+                        question_text = getattr(question_obj, 'text', str(question_obj))
+                    except Exception:
+                        question_text = str(question_id_val)
+                    return self.send_bad_response(
+                        {'detail': f'Answer already exists for question: "{question_text}" in this quiz.'},
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+                serializer = AnswerSerializer(data=answer_data)
+                serializer.is_valid(raise_exception=True)
+                answer = serializer.save()
+                results.append(serializer.data)
+                user_quiz_id = answer.user_quiz_id  # Save for later score update
 
-            Score.objects.update_or_create(
-                user_id=user,
-                subject_id=subject,
-                defaults={'aggregate_score': total_score}
-            )
-            return self.send_201_response(serializer.data)
+            # After all answers, update Score for the user/quiz/subject
+            if user_quiz_id:
+                user = user_quiz_id.user_id
+                quiz = user_quiz_id.quiz_id
+                subject = quiz.subject_id
+                user_quizzes = Quiz.objects.filter(user_id=user, quiz_id__subject_id=subject)
+                total_score = user_quizzes.aggregate(total=Sum('score'))['total'] or 0
+                Score.objects.update_or_create(
+                    user_id=user,
+                    subject_id=subject,
+                    defaults={'aggregate_score': total_score}
+                )
+
+                # --- Set completed_at if all questions answered ---
+                # Get total questions for this quiz
+                total_questions = quiz.questions.count() if hasattr(quiz, 'questions') else quiz.question_set.count()
+                answered_count = Answer.objects.filter(user_quiz_id=user_quiz_id).count()
+                if answered_count == total_questions:
+                    user_quiz_id.completed_at = timezone.now()
+                    user_quiz_id.save(update_fields=['completed_at'])
+
+            return self.send_201_response({'answers': results})
         except ValidationError as e:
             return self.send_bad_response(e.detail, status_code=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.exception("Unexpected error in POST Answer:")
+            logger.exception("Unexpected error in bulk POST Answer:")
             return self.send_bad_response(
                 {"detail": "An unexpected error occurred."},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

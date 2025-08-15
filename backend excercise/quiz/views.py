@@ -1,4 +1,4 @@
-from django.forms import ValidationError
+from rest_framework.serializers import ValidationError
 from django.http import Http404
 from rest_framework import viewsets, permissions
 from rest_framework.generics import GenericAPIView

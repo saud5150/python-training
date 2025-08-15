@@ -17,7 +17,7 @@ class SubjectFilter(filters.FilterSet):
 class QuizFilter(filters.FilterSet):
     title = filters.CharFilter(lookup_expr='icontains')
     title_exact = filters.CharFilter(field_name='title', lookup_expr='exact')    
-    subject_id = filters.NumberFilter(field_name='subject_id__id')
+    subject_id = filters.UUIDFilter(field_name='subject_id__id')
     subject_name = filters.CharFilter(field_name='subject_id__name', lookup_expr='icontains')
     created_after = filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
     created_before = filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')

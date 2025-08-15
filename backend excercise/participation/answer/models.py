@@ -1,11 +1,12 @@
 from django.db import models
 from base_model import BaseModel
-from quiz.models import Question, Quiz
-\
+from quiz.models import Question
+from participation.quiz.models import Quiz as ParticipationQuiz
+
 # Create your models here.
 
 class Answer(BaseModel):
-    user_quiz_id = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    user_quiz_id = models.ForeignKey(ParticipationQuiz, on_delete=models.CASCADE)
     question_id = models.ForeignKey(Question, on_delete=models.CASCADE)
     answer_text = models.TextField(null = True)
     is_correct = models.BooleanField(default = False)

@@ -219,7 +219,7 @@ class QuizAPIView(BaseView):
                     description="Quiz retrieved successfully",
                     serializer_class=serializer_class
                 )
-                     # List view with filters and pagination
+            # List view with filters and pagination
             queryset = self.get_queryset()
             filtered_queryset = self.apply_filters(queryset, request)
             

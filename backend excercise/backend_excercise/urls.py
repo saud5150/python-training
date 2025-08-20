@@ -22,6 +22,8 @@ from rest_framework_simplejwt.views import (
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+from backend_excercise import settings
+
 # 1. Documentation and schema URLs in a separate list
 swaggerpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -40,3 +42,10 @@ urlpatterns = [
 
 # 3. Combine both lists
 urlpatterns += swaggerpatterns
+
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ]

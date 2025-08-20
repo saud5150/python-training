@@ -47,3 +47,59 @@ def custom_exception_handler(exc, context):
         "message": "Internal Server Error",
         "detail": str(exc)
     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# utils/query_counter.py
+from django.db import connection
+from django.conf import settings
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+class QueryCounter:
+    def __init__(self, description="Query analysis"):
+        self.description = description
+        self.initial_queries = 0
+        self.start_time = 0
+        
+    def __enter__(self):
+        self.initial_queries = len(connection.queries)
+        self.start_time = time.time()
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        end_time = time.time()
+        total_queries = len(connection.queries) - self.initial_queries
+        total_time = end_time - self.start_time
+        
+        if settings.DEBUG and total_queries > 0:
+            print(f"\n=== {self.description} ===")
+            print(f"Queries executed: {total_queries}")
+            print(f"Time taken: {total_time:.3f}s")
+            
+            # Show duplicate queries
+            queries = connection.queries[self.initial_queries:]
+            sql_counts = {}
+            
+            for query in queries:
+                sql = query['sql']
+                if sql in sql_counts:
+                    sql_counts[sql] += 1
+                else:
+                    sql_counts[sql] = 1
+            
+            duplicates = {sql: count for sql, count in sql_counts.items() if count > 1}
+            if duplicates:
+                print(f"⚠️  DUPLICATE QUERIES DETECTED:")
+                for sql, count in duplicates.items():
+                    print(f"  - Executed {count} times: {sql[:100]}...")
+            
+            # Show all queries if there are many
+            if total_queries > 5:
+                print("All queries:")
+                for i, query in enumerate(queries, 1):
+                    print(f"  {i}. {query['sql'][:100]}... ({query['time']}s)")
+                    
+    @property 
+    def count(self):
+        return len(connection.queries) - self.initial_queries

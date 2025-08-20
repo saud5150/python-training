@@ -1,8 +1,109 @@
 import logging
+import hashlib
+import json
+from functools import wraps
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+from django.core.cache import cache
+from django.conf import settings
+
+from utils import QueryCounter
+
+logger = logging.getLogger(__name__)
+
+
+# # Cache utilities directly in base_view.py for minimal dependencies
+# class CacheManager:
+#     """Utility class for cache management operations"""
+    
+#     @staticmethod
+#     def is_cache_healthy():
+#         """Check if cache backend is available and healthy"""
+#         try:
+#             cache.set('health_check', 'ok', timeout=10)
+#             return cache.get('health_check') == 'ok'
+#         except Exception as e:
+#             logger.warning(f"Cache health check failed: {e}")
+#             return False
+    
+#     @staticmethod
+#     def get_cache_key(request, prefix="api", include_user=True, include_params=True):
+#         """Generate cache key for request"""
+#         key_parts = [prefix]
+        
+#         # Add path info
+#         path_key = request.path.replace('/', '_').replace('-', '_')
+#         key_parts.append(path_key)
+        
+#         # Add user info if requested
+#         if include_user and hasattr(request, 'user') and request.user.is_authenticated:
+#             try:
+#                 user_identifier = str(request.user.pk)
+#                 key_parts.append(f"user_{user_identifier}")
+#             except Exception as e:
+#                 logger.warning(f"Could not get user ID for cache key: {e}")
+#                 key_parts.append("user_authenticated")
+        
+#         # Add query parameters if requested
+#         if include_params and request.GET:
+#             try:
+#                 params_str = "&".join([f"{k}={v}" for k, v in sorted(request.GET.items())])
+#                 params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
+#                 key_parts.append(f"params_{params_hash}")
+#             except Exception as e:
+#                 logger.warning(f"Could not process query params for cache key: {e}")
+        
+#         return ":".join(key_parts)
+    
+# def cache_api_response(ttl_type='DEFAULT', user_specific=True, cache_anonymous=False):
+#     """
+#     Decorator for caching API responses
+    
+#     Args:
+#         ttl_type: Type of TTL to use ('SHORT', 'MEDIUM', 'LONG', 'DEFAULT')
+#         user_specific: Whether to include user ID in cache key
+#         cache_anonymous: Whether to cache responses for anonymous users
+#     """
+#     def decorator(func):
+#         @wraps(func)
+#         def wrapper(self, request, *args, **kwargs):
+#             # Skip caching for non-GET requests
+#             if request.method != 'GET':
+#                 return func(self, request, *args, **kwargs)
+            
+#             # Skip caching for anonymous users if not allowed
+#             if not cache_anonymous and not (hasattr(request, 'user') and request.user.is_authenticated):
+#                 return func(self, request, *args, **kwargs)
+            
+#             # Generate cache key
+#             cache_key = CacheManager.get_cache_key(
+#                 request, 
+#                 prefix=f"{self.__class__.__name__.lower()}",
+#                 include_user=user_specific,
+#                 include_params=True
+#             )
+            
+#             # Try to get cached response
+#             cached_response = cache.get(cache_key)
+#             if cached_response is not None:
+#                 logger.debug(f"Cache hit for key: {cache_key}")
+#                 return Response(cached_response)
+            
+#             # Get fresh response
+#             response = func(self, request, *args, **kwargs)
+            
+#             # Cache successful responses only
+#             if response.status_code == 200:
+#                 ttl = CacheManager.get_ttl(ttl_type)
+#                 cache.set(cache_key, response.data, timeout=ttl)
+#                 logger.debug(f"Cached response for key: {cache_key}, TTL: {ttl}")
+            
+#             return response
+#         return wrapper
+#     return decorator
+
 
 class StandardPagination(PageNumberPagination):
     """
@@ -40,6 +141,56 @@ class BaseView(APIView):
     pagination_class = StandardPagination
     serializer_class = None
 
+    # Cache configuration (override in subclasses if needed)
+    cache_ttl_type = 'DEFAULT'
+    cache_user_specific = True
+    cache_anonymous = False
+    enable_caching = True
+    
+    # Query optimization settings (override in subclasses)
+    select_related_fields = []     # ['user', 'category', 'quiz']
+    prefetch_related_fields = []   # ['tags', 'participants']
+    auto_optimize_queries = True   # Enable automatic query optimization
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to add query counting to all HTTP methods"""
+        method_name = request.method.lower()
+        description = f"{self.__class__.__name__}.{method_name}"
+        
+        with QueryCounter(description):
+            return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        """Optimized caching - check cache FIRST"""
+        
+        # Quick cache check first (no expensive operations)
+        if getattr(self, 'enable_caching', True):
+            cache_key = self._get_simple_cache_key(request)
+            cached_response = cache.get(cache_key)
+            if cached_response is not None:
+                return Response(cached_response)  # Instant return!
+        
+        # Only do expensive operations if cache miss
+        response = self._get_implementation(request, *args, **kwargs)
+        
+        # Cache the result
+        if getattr(self, 'enable_caching', True) and response.status_code == 200:
+            cache.set(cache_key, response.data, timeout=300)
+        
+        return response
+
+    def _get_simple_cache_key(self, request):
+        """Simple cache key generation without expensive operations"""
+        import hashlib
+        key_parts = [
+            self.__class__.__name__,
+            request.path,
+            request.GET.urlencode() if request.GET else '',
+            str(request.user.pk) if request.user.is_authenticated else 'anon'
+        ]
+        key_string = '|'.join(key_parts)
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
     @property
     def paginator(self):
         """
@@ -78,55 +229,69 @@ class BaseView(APIView):
             **serializer_kwargs: Additional kwargs for serializer
         """
         try:
-            # Use payload if data is None (for backward compatibility)
             actual_data = data if data is not None else payload
-            
+
             if actual_data is None:
                 return Response({
                     "success": True,
                     "message": description,
                     "data": []
                 }, status=status.HTTP_200_OK)
-            
-            # Use provided serializer_class or fall back to class attribute
-            serializer_cls = serializer_class or self.serializer_class
-            
-            # Handle pagination if requested
-            if paginate and hasattr(actual_data, 'model'):  # Check if it's a QuerySet
-                page, paginator = self.paginate_queryset(actual_data)
-                if page is not None:
-                    if serializer_cls:
-                        serializer = serializer_cls(page, many=True, **serializer_kwargs)
-                        return paginator.get_paginated_response(serializer.data)
-                    else:
-                        return paginator.get_paginated_response(list(page))
-            
-            if serializer_cls is None:
-                # If no serializer class is available, return data as-is
-                return Response({
-                    "success": True,
-                    "message": description,
-                    "data": actual_data
-                }, status=status.HTTP_200_OK)
-            
-            # Determine if we need many=True based on data type
+
+            from django.db.models.query import QuerySet
+
+            # Determine 'many' based on data type if not explicitly provided
             if many is None:
-                # Check if data is a QuerySet or list
-                from django.db.models.query import QuerySet
-                many = isinstance(actual_data, (QuerySet, list))
-            
-            # Serialize the data
-            serializer = serializer_cls(actual_data, many=many, **serializer_kwargs)
-            
+                many = isinstance(actual_data, (list, QuerySet))
+
+            if serializer_class:
+                # Optimize queryset BEFORE serialization (if you have such method)
+                if hasattr(actual_data, 'model') and hasattr(actual_data, 'select_related'):
+                    actual_data = self._optimize_queryset(actual_data)
+
+                # Apply pagination BEFORE serialization to reduce data size
+                if paginate and many:
+                    paginator = self.pagination_class()
+                    page = paginator.paginate_queryset(actual_data, getattr(self, 'request', None))
+                    if page is not None:
+                        serializer = serializer_class(page, many=True, **serializer_kwargs)
+                        return paginator.get_paginated_response(serializer.data)
+
+                # Use only() for specific fields if possible
+                if hasattr(serializer_class.Meta, 'fields') and hasattr(actual_data, 'only'):
+                    if serializer_class.Meta.fields != '__all__':
+                        actual_data = actual_data.only(*serializer_class.Meta.fields)
+
+                serializer = serializer_class(actual_data, many=many, **serializer_kwargs)
+                serialized_data = serializer.data
+            else:
+                serialized_data = actual_data
+
             return Response({
                 "success": True,
                 "message": description,
-                "data": serializer.data
+                "data": serialized_data,
+                "count": len(serialized_data) if many and isinstance(serialized_data, list) else None
             }, status=status.HTTP_200_OK)
-            
+
         except Exception as e:
-            return self.send_exception_response(e, "Error in send_successful_response")
-    
+            logger.error(f"Serialization error: {e}")
+            return self.send_exception_response(e, "Error processing response")
+
+
+    def _optimize_queryset(self, queryset):
+        """Apply query optimizations"""
+        # Add select_related for foreign keys
+        select_fields = getattr(self, 'select_related_fields', [])
+        if select_fields:
+            queryset = queryset.select_related(*select_fields)
+        
+        # Add prefetch_related for many-to-many
+        prefetch_fields = getattr(self, 'prefetch_related_fields', [])
+        if prefetch_fields:
+            queryset = queryset.prefetch_related(*prefetch_fields)
+        
+        return queryset
     def send_201_response(self, data, description="Created successfully"):
         """
         Send a 201 Created response
@@ -205,3 +370,32 @@ class BaseView(APIView):
                 ]
             ),
         ]
+    
+    # def get_optimized_queryset(self, queryset=None):
+    #     """
+    #     Automatically optimize queryset with select_related and prefetch_related
+    #     """
+    #     if not getattr(self, 'auto_optimize_queries', True):
+    #         return queryset
+        
+    #     if queryset is None:
+    #         # Try to get queryset from model or serializer
+    #         if hasattr(self, 'get_queryset'):
+    #             queryset = self.get_queryset()
+    #         elif hasattr(self, 'serializer_class') and hasattr(self.serializer_class.Meta, 'model'):
+    #             queryset = self.serializer_class.Meta.model.objects.all()
+    #         else:
+    #             return queryset
+        
+    #     # Apply select_related for foreign keys
+    #     select_fields = getattr(self, 'select_related_fields', [])
+    #     if select_fields:
+    #         queryset = queryset.select_related(*select_fields)
+        
+    #     # Apply prefetch_related for many-to-many/reverse foreign keys
+    #     prefetch_fields = getattr(self, 'prefetch_related_fields', [])
+    #     if prefetch_fields:
+    #         queryset = queryset.prefetch_related(*prefetch_fields)
+        
+    #     return queryset
+    

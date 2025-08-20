@@ -37,11 +37,50 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+
+# =============================================================================
+# CACHE CONFIGURATION
+# =============================================================================
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+        },
+        'KEY_PREFIX': 'backend_exercise',
+        'VERSION': 1,
+    }
+}
+
+# Cache timeouts (in seconds)
+CACHE_TTL = {
+    'DEFAULT': 900,      # 15 minutes
+    'STATIC': 3600,      # 1 hour (subjects, etc.)
+    'DYNAMIC': 300,      # 5 minutes (scores, answers)
+    'USER_SESSION': 1800, # 30 minutes
+}
+
+# Cachalot settings
+CACHALOT_ENABLED = True
+CACHALOT_CACHE = 'default'
+CACHALOT_TIMEOUT = 3600  # 1 hour for ORM queries
+
 # =============================================================================
 # APPLICATION DEFINITION
 # =============================================================================
 
 INSTALLED_APPS = [
+    # Caching
+    'cachalot',
+
     # Django core apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -301,3 +340,17 @@ REST_AUTH_SERIALIZERS = {
 }
 
 LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'
+
+# Debugging
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+    
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+    }
+    
+    INTERNAL_IPS = [    
+        '127.0.0.1',
+        'localhost',
+    ]

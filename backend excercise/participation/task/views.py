@@ -15,25 +15,32 @@ from drf_spectacular.types import OpenApiTypes
 class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer
-    
+    enable_caching = True  
+
     def get(self, request, pk=None):
         try:
             if pk:
                 task = get_object_or_404(Task, pk=pk)
-                
-                serializer = TaskSerializer(task)
-                return self.send_successful_response(serializer.data)
+                # Pass the task object, not serializer.data
+                return self.send_successful_response(
+                    data=task,
+                    serializer_class=TaskSerializer,
+                    description="Task retrieved successfully"
+                )
+        
             tasks = Task.objects.all()
-            serializer = TaskSerializer(tasks, many=True)
-            return self.send_successful_response(serializer.data)
-        except Http404:
-            return Response(
-                {'detail': 'Task not found.'},
-                status=status.HTTP_404_NOT_FOUND
+            # Pass the queryset, not serializer.data
+            return self.send_successful_response(
+                data=tasks,
+                serializer_class=TaskSerializer,
+                many=True,
+                description="Tasks retrieved successfully"
             )
+        
+        except Http404:
+            return Response({'detail': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return self.send_exception_response(e, "An error occurred while retrieving tasks")
-
     def post(self, request):
         try:
             serializer = TaskSerializer(data=request.data)

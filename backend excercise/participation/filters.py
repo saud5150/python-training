@@ -1,7 +1,9 @@
 import django_filters
+from django_filters import rest_framework as filters
 from .score.models import Score
 from .answer.models import Answer
 from .quiz.models import Quiz as ParticipationQuiz
+from .task.models import Task
 
 
 class ScoreFilter(django_filters.FilterSet):
@@ -236,3 +238,120 @@ class QuizFilter(django_filters.FilterSet):
     class Meta:
         model = ParticipationQuiz
         fields = ['user_id', 'quiz_id', 'score', 'total_questions', 'total_correct']
+
+
+class TaskFilter(filters.FilterSet):
+    # Type filter
+    type = filters.ChoiceFilter(
+        choices=Task.TaskType.choices,  # Use the choices from your model
+        help_text="Filter by task type (quiz, reminder, todo)"
+    )
+
+    # Text filters
+    title = filters.CharFilter(
+        lookup_expr='icontains',
+        help_text="Filter by task title (contains)"
+    )
+    
+    description = filters.CharFilter(
+        lookup_expr='icontains',
+        help_text="Filter by task description (contains)"
+    )
+    
+    # Status filters
+    status = filters.ChoiceFilter(
+        choices=[
+            ('pending', 'Pending'),
+            ('in_progress', 'In Progress'),
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        help_text="Filter by task status"
+    )
+    
+    # Priority filters
+    priority = filters.ChoiceFilter(
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('urgent', 'Urgent'),
+        ],
+        help_text="Filter by task priority"
+    )
+    
+    # User filters
+    assigned_to = filters.UUIDFilter(
+        field_name='user_id',
+        help_text="Filter by assigned user ID"
+    )
+    
+    created_by = filters.UUIDFilter(
+        field_name='created_by_id',
+        help_text="Filter by creator user ID"
+    )
+    
+    # Date filters
+    created_after = filters.DateTimeFilter(
+        field_name='created_at',
+        lookup_expr='gte',
+        help_text="Filter tasks created after this date"
+    )
+    
+    created_before = filters.DateTimeFilter(
+        field_name='created_at',
+        lookup_expr='lte',
+        help_text="Filter tasks created before this date"
+    )
+    
+    due_after = filters.DateTimeFilter(
+        field_name='due_date',
+        lookup_expr='gte',
+        help_text="Filter tasks due after this date"
+    )
+    
+    due_before = filters.DateTimeFilter(
+        field_name='due_date',
+        lookup_expr='lte',
+        help_text="Filter tasks due before this date"
+    )
+    
+    # Boolean filters
+    is_completed = filters.BooleanFilter(
+        method='filter_is_completed',
+        help_text="Filter by completion status"
+    )
+    
+    is_overdue = filters.BooleanFilter(
+        method='filter_is_overdue',
+        help_text="Filter overdue tasks"
+    )
+    
+    # Ordering
+    ordering = filters.OrderingFilter(
+        fields=(
+            ('title', 'title'),
+            ('created_at', 'created_at'),
+            ('updated_at', 'updated_at'),
+            ('due_date', 'due_date'),
+            ('priority', 'priority'),
+            ('status', 'status'),
+        ),
+        field_labels={
+            'title': 'Title',
+            'created_at': 'Created Date',
+            'updated_at': 'Updated Date',
+            'due_date': 'Due Date',
+            'priority': 'Priority',
+            'status': 'Status',
+        }
+    )
+    
+    class Meta:
+        model = Task
+        fields = [
+            'title', 'description', 'status', 'priority',
+            'assigned_to', 'created_by', 'created_after', 'created_before',
+            'due_after', 'due_before', 'is_completed', 'is_overdue'
+        ]
+    

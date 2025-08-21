@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
 
 class StandardPagination(PageNumberPagination):
     """
@@ -38,8 +39,17 @@ class BaseView(APIView):
     Base view class for participation app with common response methods.
     """
     pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend]
+
     serializer_class = None
 
+    def filter_queryset(self, queryset):
+        """Apply all configured filter backends"""
+        for backend_class in getattr(self, 'filter_backends', []):
+            backend = backend_class()
+            queryset = backend.filter_queryset(self.request, queryset, self)
+        return queryset
+    
     @property
     def paginator(self):
         """
@@ -88,6 +98,9 @@ class BaseView(APIView):
                     "data": []
                 }, status=status.HTTP_200_OK)
             
+            if hasattr(actual_data, 'model') and (many is True or (many is None and hasattr(actual_data, 'model'))):
+                actual_data = self.filter_queryset(actual_data)
+        
             # Use provided serializer_class or fall back to class attribute
             serializer_cls = serializer_class or self.serializer_class
             

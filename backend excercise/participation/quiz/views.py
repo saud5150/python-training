@@ -55,12 +55,6 @@ class QuizAPIView(BaseView):
             'user_id',
             'quiz_id__subject_id'
         ).all()
-
-    def apply_filters(self, queryset, request):
-        """Apply filtering, ordering, and search"""
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
-        return queryset
     
     def get(self, request, pk=None):
         try:
@@ -73,10 +67,9 @@ class QuizAPIView(BaseView):
                 )
             
             queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
             
             return self.send_successful_response(
-                data=filtered_queryset,
+                data=queryset,
                 description="Quiz participations retrieved successfully",
                 serializer_class=QuizSerializer,
                 paginate=True

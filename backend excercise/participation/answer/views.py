@@ -55,19 +55,12 @@ class AnswerAPIView(BaseView):
             'user_quiz_id__quiz_id__subject_id',  # ParticipationQuiz -> Quiz -> Subject
             'question_id'                         # Answer -> Question
         )
-        
         if user.role in ['admin', 'teacher']:
             return base_queryset.all()
         elif user.role == 'student':
             # Students can only see their own answers
             return base_queryset.filter(user_quiz_id__user_id=user)
         return Answer.objects.none()
-
-    def apply_filters(self, queryset, request):
-        """Apply filtering, ordering, and search"""
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
-        return queryset
 
     def get(self, request, pk=None):
         try:
@@ -80,10 +73,11 @@ class AnswerAPIView(BaseView):
                 )
             
             queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
-            
+            # filtered_queryset = self.apply_filters(queryset, request)
+            for backend in self.filter_backends:
+                queryset = backend().filter_queryset(request, queryset, self)
             return self.send_successful_response(
-                data=filtered_queryset,
+                data=queryset,
                 description="Answers retrieved successfully",
                 serializer_class=AnswerSerializer,
                 paginate=True

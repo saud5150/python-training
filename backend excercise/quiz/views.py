@@ -8,7 +8,7 @@ from rest_framework import status
 from base_view import BaseView
 from quiz.filters import QuestionFilter, QuizFilter, SubjectFilter
 from quiz.models import Question, Quiz, Subject
-from quiz.permissions import IsTeacherOrReadOnlyForStudents
+from quiz.permissions import IsAdminOrReadOnlyAuthenticated, IsTeacherOrReadOnlyForStudents
 from .models import *
 from .serializers import *
 
@@ -38,26 +38,12 @@ from drf_spectacular.types import OpenApiTypes
 class SubjectView(BaseView):
     serializer_class = SubjectSerializer 
     filterset_class = SubjectFilter
+    permission_classes = [IsAdminOrReadOnlyAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
-
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
     search_fields = ['name', 'description']
-    def get_queryset(self):
-        return Subject.objects.all()
-    
-    def apply_filters(self, queryset, request):
-        """Apply filtering, ordering, and search"""
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
-        return queryset
-        # We'll determine permission per-method
-    def get_permissions(self):
-        # Only admin can POST (create), PUT/PATCH (update), DELETE
-        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
-        # All authenticated users can GET (list/retrieve)
-        return [permissions.IsAuthenticated()]
+    queryset = Subject.objects.all()
 
     def get(self, request, pk=None):
         try:
@@ -68,12 +54,10 @@ class SubjectView(BaseView):
                     description="Subject retrieved successfully",
                     serializer_class=SubjectSerializer
                 )
-            
-            queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
+
             
             return self.send_successful_response(
-                data=filtered_queryset,
+                data=self.queryset,
                 description="Subjects retrieved successfully",
                 serializer_class=SubjectSerializer,
                 paginate=True
@@ -191,42 +175,27 @@ class QuizAPIView(BaseView):
     ordering_fields = ['title', 'created_at', 'subject_id__name']
     ordering = ['title']
     search_fields = ['title', 'description']  
-    
-    def get_queryset(self):
-        """Get queryset with optimized database queries"""
-        return Quiz.objects.select_related('subject_id').prefetch_related('question_set').all()
-
-    def apply_filters(self, queryset, request):
-        """Apply filtering, ordering, and search"""
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
-        return queryset
+    queryset = Quiz.objects.select_related('subject_id').prefetch_related('question_set').all()
 
     def get(self, request, pk=None):
         """
         Retrieve a list of quizzes or a specific quiz by ID.
         Supports filtering, pagination, search, and ordering.
         """
-        try:
-            user = request.user
-            serializer_class = QuizSerializer
-                
+        try:                
             if pk:
                 # Single quiz retrieval
                 quiz = get_object_or_404(self.get_queryset(), pk=pk)
                 return self.send_successful_response(
                     quiz, 
                     description="Quiz retrieved successfully",
-                    serializer_class=serializer_class
+                    serializer_class=QuizSerializer
                 )
-            # List view with filters and pagination
-            queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
-            
+
             return self.send_successful_response(
-                data=filtered_queryset,
+                data=self.queryset,
                 description="Quizzes retrieved successfully",
-                serializer_class=serializer_class,
+                serializer_class=QuizSerializer,
                 paginate=True
             )
             
@@ -337,28 +306,14 @@ class QuizAPIView(BaseView):
 )
 class QuestionView(BaseView):
     serializer_class = QuestionSerializer
+    permission_classes = [IsAdminOrReadOnlyAuthenticated]  
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
     filterset_class = QuestionFilter
     ordering_fields = ['created_at', 'quiz_id__title']
     ordering = ['quiz_id__title', 'question_text']
     search_fields = ['question_text']
+    queryset = Question.objects.select_related('quiz_id').all()
 
-    def get_queryset(self):
-        return Question.objects.select_related('quiz_id').all()
-
-    def apply_filters(self, queryset, request):
-        """Apply filtering, ordering, and search"""
-        for backend in self.filter_backends:
-            queryset = backend().filter_queryset(request, queryset, self)
-        return queryset
-
-    # We'll determine permission per-method
-    def get_permissions(self):
-        # Only admin can POST (create), PUT/PATCH (update), DELETE
-        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            return [IsAdmin()]
-        # All authenticated users can GET (list/retrieve)
-        return [permissions.IsAuthenticated()]
 
     def get(self, request, pk=None):
         try:
@@ -376,11 +331,9 @@ class QuestionView(BaseView):
                     description="Question retrieved successfully",
                     serializer_class=serializer_class
                 )
-            queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
             
             return self.send_successful_response(
-                data=filtered_queryset,
+                data=self.queryset,
                 description="Questions retrieved successfully",
                 serializer_class=serializer_class,
                 paginate=True

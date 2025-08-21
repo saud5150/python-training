@@ -4,28 +4,85 @@ from django.shortcuts import get_object_or_404, render
 from rest_framework.response import Response
 from rest_framework import status
 from base_view import BaseView
+from participation.filters import TaskFilter
 from participation.task.models import Task
 from participation.permissions import IsAdminOrReadUpdate
 from participation.task.serializers import TaskSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample
+
 # Create your views here.
 
-@extend_schema(tags=['Participation/ Task'])
+@extend_schema(
+    tags=['Participation/ Task'],
+    parameters=[
+
+                OpenApiParameter(
+            'type', 
+            OpenApiTypes.STR, 
+            description='Filter by task type',
+            enum=['quiz', 'reminder', 'todo'],
+            examples=[
+                OpenApiExample('Quiz tasks', value='quiz'),
+                OpenApiExample('Reminder tasks', value='reminder'),
+                OpenApiExample('Todo tasks', value='todo'),
+            ]
+        ),
+        # Basic filters
+        OpenApiParameter('title', OpenApiTypes.STR, description='Filter by task title (contains)'),
+        OpenApiParameter('description', OpenApiTypes.STR, description='Filter by task description (contains)'),
+        OpenApiParameter('status', OpenApiTypes.STR, description='Filter by task status', 
+                        enum=['pending', 'in_progress', 'completed', 'cancelled']),
+        OpenApiParameter('priority', OpenApiTypes.STR, description='Filter by task priority',
+                        enum=['low', 'medium', 'high', 'urgent']),
+        
+        # User filters
+        OpenApiParameter('assigned_to', OpenApiTypes.UUID, description='Filter by assigned user ID'),
+        
+        # Date filters
+        OpenApiParameter('created_after', OpenApiTypes.DATETIME, description='Filter tasks created after this date'),
+        OpenApiParameter('created_before', OpenApiTypes.DATETIME, description='Filter tasks created before this date'),
+        OpenApiParameter('due_after', OpenApiTypes.DATETIME, description='Filter tasks due after this date'),
+        OpenApiParameter('due_before', OpenApiTypes.DATETIME, description='Filter tasks due before this date'),
+
+        # Search and ordering
+        OpenApiParameter('title', OpenApiTypes.STR, description='Search in title'),
+        OpenApiParameter('description', OpenApiTypes.STR, description='Search in description'),
+        OpenApiParameter('ordering', OpenApiTypes.STR, description='Order by: title, -title, created_at, -created_at, due_date, -due_date, priority, -priority'),
+        
+        # Pagination
+        OpenApiParameter('page', OpenApiTypes.INT, description='Page number'),
+        OpenApiParameter('page_size', OpenApiTypes.INT, description='Items per page'),
+    ]
+)
 class TaskAPIView(BaseView):
     permission_classes = [IsAdminOrReadUpdate]
     serializer_class = TaskSerializer
-    
+    filterset_class = TaskFilter
+    search_fields = ['title', 'description']
+    ordering_fields = ['title', 'created_at', 'updated_at', 'due_date', 'priority', 'status']
+    ordering = ['-created_at']
+
+
     def get(self, request, pk=None):
         try:
             if pk:
                 task = get_object_or_404(Task, pk=pk)
-                
-                serializer = TaskSerializer(task)
-                return self.send_successful_response(serializer.data)
+                # Pass the task object, not serializer.data
+                return self.send_successful_response(
+                        data=task,
+                        serializer_class=TaskSerializer,
+                        description="Task retrieved successfully"
+                )
             tasks = Task.objects.all()
-            serializer = TaskSerializer(tasks, many=True)
-            return self.send_successful_response(serializer.data)
+
+            return self.send_successful_response(
+                data=tasks,
+                serializer_class=TaskSerializer,
+                many=True,
+                description="Tasks retrieved successfully"
+            )
         except Http404:
             return Response(
                 {'detail': 'Task not found.'},

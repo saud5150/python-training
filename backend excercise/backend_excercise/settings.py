@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     # Development and utilities
     "django_extensions",
     "django_filters",  # For filtering in DRF views
+    'querycount',
 
     # Project/local apps
     "users",
@@ -107,6 +108,8 @@ SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
 
 
 MIDDLEWARE = [
+    'querycount.middleware.QueryCountMiddleware',
+
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -301,3 +304,20 @@ REST_AUTH_SERIALIZERS = {
 }
 
 LOGIN_REDIRECT_URL = '/api/v1/users/auth/session-to-jwt/'
+
+# Configure django-querycount
+QUERYCOUNT = {
+    'THRESHOLDS': {
+        'MEDIUM': 5,
+        'HIGH': 10,
+        'MIN_TIME_TO_LOG': 0,           # Show all queries regardless of time
+        'MIN_QUERY_COUNT_TO_LOG': 1,    # Show from 1 query onwards
+    },
+    'IGNORE_REQUEST_PATTERNS': [],      # Don't ignore any requests
+    'IGNORE_SQL_PATTERNS': [],          # Don't ignore any SQL patterns  
+    'DISPLAY_DUPLICATES': 10,           # Show up to 10 duplicate queries
+    'RESPONSE_HEADER': 'X-DjangoQueryCount-Count',
+    'ENABLED': True,
+}
+
+

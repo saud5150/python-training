@@ -30,20 +30,21 @@ class SubjectSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = '__all__'
+        fields = ['id', 'question_text', 'correct_answer', 'quiz_id']
         lookup_field = 'id'
 
 class StudentQuestionSerializer(serializers.ModelSerializer):
     """Question serializer for students - excludes correct_answer"""
     class Meta:
         model = Question
-        exclude = ['correct_answer']
+        # exclude = ['correct_answer']
+        fields = ['id', 'question_text', 'quiz_id']
         lookup_field = 'id'
 
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
-        fields = '__all__'
+        fields = ['id', 'title', 'description', 'subject_id']
 
 class StudentQuizSerializer(serializers.ModelSerializer):
     """Quiz serializer for students - includes questions without correct answers"""

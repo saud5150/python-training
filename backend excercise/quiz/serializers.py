@@ -2,11 +2,30 @@ from rest_framework import serializers
 from .models import *
 
 
+# class SubjectSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Subject
+#         fields = '__all__'
+#         lookup_field = 'id'
+
+# In quiz/serializers.py
 class SubjectSerializer(serializers.ModelSerializer):
+    # ✅ Use SerializerMethodField to avoid extra queries
+    teachers = serializers.SerializerMethodField()
+    
     class Meta:
         model = Subject
-        fields = '__all__'
-        lookup_field = 'id'
+        fields = ['id', 'name', 'teachers']
+    
+    def get_teachers(self, obj):
+        return [
+            {
+                'id': str(teacher.id),
+                'name': teacher.name,
+                'email': teacher.email
+            }
+            for teacher in obj.teachers.all()
+        ]
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:

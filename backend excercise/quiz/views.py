@@ -43,8 +43,21 @@ class SubjectView(BaseView):
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
     search_fields = ['name', 'description']
-    queryset = Subject.objects.all()
+    queryset = Subject.objects.prefetch_related('teachers')
 
+    # def get_queryset(self):
+    #     """
+    #     Optimized queryset to prevent N+1 queries.
+        
+    #     Before: 6 queries (1 + 1 + 1 + 3 teacher lookups)
+    #     After: 3 queries (1 + 1 + 1 with prefetched teachers)
+    #     """
+    #     # FIX: Use prefetch_related to solve N+1 problem
+    #     return Subject.objects.only('id', 'name').prefetch_related(
+    #         'teachers'  # This will fetch all teachers in one query
+    #     )
+
+    
     def get(self, request, pk=None):
         try:
             if pk:
@@ -55,7 +68,12 @@ class SubjectView(BaseView):
                     serializer_class=SubjectSerializer
                 )
 
-            
+            # Apply filters manually to avoid BaseView auto-filtering
+            #queryset = self.get_queryset()
+            # queryset = Subject.objects.all()
+
+            # ✅ Convert to list to avoid additional queries during serialization
+            # subjects_list = list(queryset)            
             return self.send_successful_response(
                 data=self.queryset,
                 description="Subjects retrieved successfully",
@@ -175,7 +193,7 @@ class QuizAPIView(BaseView):
     ordering_fields = ['title', 'created_at', 'subject_id__name']
     ordering = ['title']
     search_fields = ['title', 'description']  
-    queryset = Quiz.objects.select_related('subject_id').prefetch_related('question_set').all()
+    queryset = Quiz.objects.select_related('subject_id', 'assigned_teacher').all()
 
     def get(self, request, pk=None):
         """

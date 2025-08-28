@@ -23,3 +23,36 @@ class IsTeacherOrReadOnlyForStudents(BasePermission):
         
         return False
     
+# In users/permissions.py or quiz/permissions.py
+
+from rest_framework import permissions
+
+class IsAdminOrReadOnlyAuthenticated(permissions.BasePermission):
+    """
+    Custom permission to only allow admin users to create/update/delete.
+    All authenticated users can read (GET).
+    """
+    
+    def has_permission(self, request, view):
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return False
+        
+        # Allow GET (read) for all authenticated users
+        if request.method in permissions.SAFE_METHODS:  # GET, HEAD, OPTIONS
+            return True
+        
+        # Only admin can POST, PUT, PATCH, DELETE
+        return hasattr(request.user, 'role') and request.user.role == 'admin'
+    
+    def has_object_permission(self, request, view, obj):
+        # Same logic for object-level permissions
+        if not request.user.is_authenticated:
+            return False
+        
+        # Allow read for all authenticated users
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Only admin can modify
+        return hasattr(request.user, 'role') and request.user.role == 'admin'

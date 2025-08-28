@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import status
 from base_view import BaseView
+from participation.filters import ScoreFilter
 from participation.task.models import Task
 from participation.answer.models import Answer
 from participation.quiz.models import Quiz
@@ -69,6 +70,7 @@ from drf_spectacular.types import OpenApiTypes
 class ScoreAPIView(BaseView):
     permission_classes = [IsAdminOrTeacher]
     serializer_class = ScoreSerializer
+    filterset_class = ScoreFilter
     
     def get_queryset(self):
         """Filter scores based on user role"""
@@ -78,47 +80,7 @@ class ScoreAPIView(BaseView):
         elif user.role == 'student':
             return Score.objects.select_related('user_id', 'subject_id').filter(user_id=user)
         return Score.objects.none()
-    
-    def apply_filters(self, queryset, request):
-        """Apply simple filters to queryset"""
-        
-        # Filter by subject
-        subject_id = request.query_params.get('subject_id')
-        if subject_id:
-            try:
-                queryset = queryset.filter(subject_id=subject_id)
-            except (ValueError, TypeError):
-                # Invalid UUID, ignore filter
-                pass
-            
-        # Filter by minimum score
-        min_score = request.query_params.get('min_aggregate_score')
-        if min_score:
-            try:
-                min_score_value = float(min_score)
-                queryset = queryset.filter(aggregate_score__gte=min_score_value)
-            except (ValueError, TypeError):
-                # Invalid score, ignore filter
-                pass
 
-        # Filter by maximum score
-        max_score = request.query_params.get('max_aggregate_score')
-        if max_score:
-            try:
-                max_score_value = float(max_score)
-                queryset = queryset.filter(aggregate_score__lte=max_score_value)
-            except (ValueError, TypeError):
-                # Invalid score, ignore filter
-                pass
-
-        # Apply ordering
-        ordering = request.query_params.get('ordering', '-aggregate_score')
-        valid_orderings = ['aggregate_score', '-aggregate_score', 'created_at', '-created_at', 'updated_at', '-updated_at']
-        if ordering in valid_orderings:
-            queryset = queryset.order_by(ordering)
-        
-
-        return queryset
     
     def get(self, request, pk=None):
         try:
@@ -129,14 +91,10 @@ class ScoreAPIView(BaseView):
             
             # List view - apply filters and pagination
             queryset = self.get_queryset()
-            filtered_queryset = self.apply_filters(queryset, request)
-            
-            # Debug: Check if there are any scores
-            print(f"Total scores in queryset: {filtered_queryset.count()}")
-            
+                        
             # Use BaseView pagination with the correct parameter name
             return self.send_successful_response(
-                data=filtered_queryset,  # Pass the queryset as data
+                data=queryset,  # Pass the queryset as data
                 description="Scores retrieved successfully",
                 serializer_class=ScoreSerializer,
                 paginate=True  # Enable pagination

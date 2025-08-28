@@ -2,29 +2,49 @@ from rest_framework import serializers
 from .models import *
 
 
+# class SubjectSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Subject
+#         fields = '__all__'
+#         lookup_field = 'id'
+
+# In quiz/serializers.py
 class SubjectSerializer(serializers.ModelSerializer):
+    # ✅ Use SerializerMethodField to avoid extra queries
+    teachers = serializers.SerializerMethodField()
+    
     class Meta:
         model = Subject
-        fields = '__all__'
-        lookup_field = 'id'
+        fields = ['id', 'name', 'teachers']
+    
+    def get_teachers(self, obj):
+        return [
+            {
+                'id': str(teacher.id),
+                'name': teacher.name,
+                'email': teacher.email
+            }
+            for teacher in obj.teachers.all()
+        ]
 
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = '__all__'
+        fields = ['id', 'question_text', 'correct_answer', 'quiz_id']
         lookup_field = 'id'
 
 class StudentQuestionSerializer(serializers.ModelSerializer):
     """Question serializer for students - excludes correct_answer"""
     class Meta:
         model = Question
-        exclude = ['correct_answer']
+        # exclude = ['correct_answer']
+        fields = ['id', 'question_text', 'quiz_id']
         lookup_field = 'id'
 
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
-        fields = '__all__'
+        fields = ['id', 'title', 'description', 'subject_id']
 
 class StudentQuizSerializer(serializers.ModelSerializer):
     """Quiz serializer for students - includes questions without correct answers"""

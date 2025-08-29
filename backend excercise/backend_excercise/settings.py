@@ -216,7 +216,7 @@ REST_FRAMEWORK = {
 
     # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.auth.LightweightJWTAuthentication',
     ),
 
     # Schema generation
@@ -249,8 +249,9 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.MyTokenObtainPairSerializer',
     'USER_ID_FIELD': 'id',  # Use your actual PK field name
-        'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=90),
 }
 

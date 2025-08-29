@@ -11,6 +11,7 @@ from quiz.models import Question, Quiz, Subject
 from quiz.permissions import IsAdminOrReadOnlyAuthenticated, IsTeacherOrReadOnlyForStudents
 from .models import *
 from .serializers import *
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from django.shortcuts import get_object_or_404, render
 from rest_framework import viewsets, permissions
@@ -186,6 +187,7 @@ class AssignTeacherToQuizView(APIView):
     ]
 )
 class QuizAPIView(BaseView):
+    authentication_classes = [JWTAuthentication]  # Use default authentication
     serializer_class = QuizSerializer
     permission_classes = [IsTeacherOrReadOnlyForStudents]
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
@@ -193,7 +195,10 @@ class QuizAPIView(BaseView):
     ordering_fields = ['title', 'created_at', 'subject_id__name']
     ordering = ['title']
     search_fields = ['title', 'description']  
-    queryset = Quiz.objects.select_related('subject_id', 'assigned_teacher').all()
+    queryset = Quiz.objects.select_related('subject_id', 'assigned_teacher').only(
+        'id', 'title', 'description', 'subject_id__id', 'subject_id__name',
+        'assigned_teacher__id', 'assigned_teacher__name', 'assigned_teacher__email'
+    )
 
     def get(self, request, pk=None):
         """
@@ -203,7 +208,7 @@ class QuizAPIView(BaseView):
         try:                
             if pk:
                 # Single quiz retrieval
-                quiz = get_object_or_404(self.get_queryset(), pk=pk)
+                quiz = get_object_or_404(self.queryset, pk=pk)
                 return self.send_successful_response(
                     quiz, 
                     description="Quiz retrieved successfully",
@@ -335,9 +340,8 @@ class QuestionView(BaseView):
 
     def get(self, request, pk=None):
         try:
-            user = request.user
-            # Choose serializer based on user role
-            if hasattr(user, 'role') and user.role == 'student':
+            claims = request.auth
+            if claims and claims.get('role') == 'student':
                 serializer_class = StudentQuestionSerializer
             else:
                 serializer_class = QuestionSerializer

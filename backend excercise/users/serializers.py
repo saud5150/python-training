@@ -58,6 +58,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         # Add only necessary claims
+        token['name'] = user.name
         token['role'] = user.role
         token['is_staff'] = user.is_staff
         token['is_superuser'] = user.is_superuser

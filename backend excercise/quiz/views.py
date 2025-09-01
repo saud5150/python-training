@@ -187,7 +187,6 @@ class AssignTeacherToQuizView(APIView):
     ]
 )
 class QuizAPIView(BaseView):
-    authentication_classes = [JWTAuthentication]  # Use default authentication
     serializer_class = QuizSerializer
     permission_classes = [IsTeacherOrReadOnlyForStudents]
     filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]

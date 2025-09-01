@@ -261,9 +261,27 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Quiz Project API',
-    'DESCRIPTION': 'API documentation for Quiz project.',
+    'DESCRIPTION': 'API documentation',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+    },
+    'AUTHENTICATION_WHITELIST': [
+        'users.auth.LightweightJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'SECURITY': [
+        {'Bearer': []}
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'COMPONENT_SECURITY_SCHEMES': {
+        'Bearer': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+        }
+    },
 }
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None

@@ -16,7 +16,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404, render
 from rest_framework import viewsets, permissions
 
-from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer, StudentQuestionSerializer, StudentQuizSerializer
+from quiz.serializers import QuestionSerializer, QuizSerializer, SubjectSerializer, StudentQuestionSerializer
 from users.permissions import IsAdmin, IsTeacher, IsAdminOrTeacher
 from .utils import process_question_csv_upload
 from drf_spectacular.utils import extend_schema, OpenApiParameter

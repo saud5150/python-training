@@ -46,14 +46,6 @@ class QuizSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = ['id', 'title', 'description', 'subject_id']
 
-class StudentQuizSerializer(serializers.ModelSerializer):
-    """Quiz serializer for students - includes questions without correct answers"""
-    questions = StudentQuestionSerializer(source='question_set', many=True, read_only=True)
-    
-    class Meta:
-        model = Quiz
-        fields = '__all__'
-
 class AssignTeacherToQuizSerializer(serializers.Serializer):
     quiz_id = serializers.UUIDField()
     teacher_id = serializers.UUIDField()

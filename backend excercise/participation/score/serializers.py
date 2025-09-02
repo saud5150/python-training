@@ -5,5 +5,5 @@ from participation.score.models import *
 class ScoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Score
-        fields = '__all__'
+        fields = ['user_id', 'subject_id', 'aggregate_score']
         lookup_field = 'id'

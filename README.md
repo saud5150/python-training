@@ -118,3 +118,30 @@ Contributions are welcome! Please fork the repo and submit a pull request.
 ## Contact
 
 For questions or support, please open an issue in the repository.
+
+## Django REST Framework (DRF) API
+
+This project uses **Django REST Framework (DRF)** to build a modular, secure, and efficient API for all backend functionality.
+
+### Apps Included
+- **users**: User registration, authentication (JWT), profile management, and role-based access.
+- **quiz**: Quizzes, questions, subjects, and teacher assignment.
+- **participation**: User answers, scores, and tasks.
+
+### Authentication
+- Uses JWT tokens via a custom lightweight authentication class (`LightweightJWTAuthentication`).
+- All endpoints requiring authentication expect a JWT Bearer token.
+
+### Permissions
+- Role-based permissions (admin, teacher, student) are enforced using JWT claims—no database query for user roles.
+- Custom permission classes ensure only authorized users can create, update, or delete resources.
+
+### API Features
+- CRUD operations for quizzes, questions, subjects, answers, scores, and tasks.
+- Filtering, searching, and ordering for list endpoints.
+- Pagination for large result sets.
+- OpenAPI/Swagger documentation via drf-spectacular, with JWT authentication available for all endpoints.
+
+### Testing
+- Full coverage with pytest and DRF’s APIClient.
+- Tests are organized per app for maintainability.

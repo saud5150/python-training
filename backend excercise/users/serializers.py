@@ -1,10 +1,10 @@
-
 from smtplib import SMTPAuthenticationError, SMTPException
 from django.forms import ValidationError
 from rest_framework import serializers
 from users.models import *
 from django.core.mail import send_mail
 from django.conf import settings
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from users.utils import send_registration_email
 
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['id', 'name', 'email', 'role', 'password'] 
         lookup_field = 'id'
 
     def create(self, validated_data):
@@ -51,3 +51,17 @@ class UserSerializer(serializers.ModelSerializer):
         Return all fields for all user roles.
         """
         return super().to_representation(instance)
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Add only necessary claims
+        token['name'] = user.name
+        token['role'] = user.role
+        token['is_staff'] = user.is_staff
+        token['is_superuser'] = user.is_superuser
+        token['email'] = user.email
+        return token
+

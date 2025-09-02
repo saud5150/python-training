@@ -39,7 +39,7 @@ class GoogleLogin(SocialLoginView):
 # List all users and create user (GET/POST /users/)
 @extend_schema(tags=['Users'])
 class UserListView(ListAPIView):
-    queryset = User.objects.all()
+    queryset = User.objects.all().prefetch_related('groups', 'user_permissions')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
 

@@ -9,50 +9,30 @@ class IsTeacherOrReadOnlyForStudents(BasePermission):
     """
 
     def has_permission(self, request, view):
-        user = request.user
-        if not user or not user.is_authenticated:
+        claims = request.auth  # Use JWT claims, not request.user
+        if not claims:
             return False
 
-        if user.role in ['admin', 'teacher']:
+        role = claims.get('role')
+        if role in ['admin', 'teacher']:
             return True  # full CRUD
 
-        if user.role == 'student':
-            if request.method in ['GET']:
+        if role == 'student':
+            if request.method in SAFE_METHODS:
                 return True  # students can read
             return False
-        
+
         return False
     
 # In users/permissions.py or quiz/permissions.py
 
-from rest_framework import permissions
-
-class IsAdminOrReadOnlyAuthenticated(permissions.BasePermission):
-    """
-    Custom permission to only allow admin users to create/update/delete.
-    All authenticated users can read (GET).
-    """
-    
+class IsAdminOrReadOnlyAuthenticated(BasePermission):
     def has_permission(self, request, view):
-        # Check if user is authenticated
-        if not request.user.is_authenticated:
+        claims = request.auth
+        if not claims:
             return False
-        
-        # Allow GET (read) for all authenticated users
-        if request.method in permissions.SAFE_METHODS:  # GET, HEAD, OPTIONS
-            return True
-        
-        # Only admin can POST, PUT, PATCH, DELETE
-        return hasattr(request.user, 'role') and request.user.role == 'admin'
-    
-    def has_object_permission(self, request, view, obj):
-        # Same logic for object-level permissions
-        if not request.user.is_authenticated:
-            return False
-        
         # Allow read for all authenticated users
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return True
-        
-        # Only admin can modify
-        return hasattr(request.user, 'role') and request.user.role == 'admin'
+        # Only admin can write
+        return claims.get('role') == 'admin'

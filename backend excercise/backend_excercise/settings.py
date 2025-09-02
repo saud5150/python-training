@@ -216,7 +216,7 @@ REST_FRAMEWORK = {
 
     # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.auth.LightweightJWTAuthentication',
     ),
 
     # Schema generation
@@ -249,8 +249,9 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.MyTokenObtainPairSerializer',
     'USER_ID_FIELD': 'id',  # Use your actual PK field name
-        'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=90),
 }
 
@@ -260,9 +261,27 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Quiz Project API',
-    'DESCRIPTION': 'API documentation for Quiz project.',
+    'DESCRIPTION': 'API documentation',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+    },
+    'AUTHENTICATION_WHITELIST': [
+        'users.auth.LightweightJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'SECURITY': [
+        {'Bearer': []}
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'COMPONENT_SECURITY_SCHEMES': {
+        'Bearer': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+        }
+    },
 }
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None

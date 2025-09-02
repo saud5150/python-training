@@ -4,7 +4,7 @@ from participation.quiz.models import *
 class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
-        fields = '__all__'
+        fields = ['user_id', 'quiz_id', 'score', 'total_questions', 'total_correct', 'completed_at']
 
     def create(self, validated_data):
         # Automatically set the total questions and total correct based on the quiz
